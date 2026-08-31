@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Cek Status Service — OMRON Healthcare</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --navy:#0b2f6b; --blue:#0f4fb0; --blue-light:#e8f0fd; --orange:#f2932d;
+    --bg:#f4f6fb; --card:#ffffff; --border:#e1e6ef; --ink:#152238; --ink-soft:#5c6b83;
+    --ok:#1f9d55; --warn:#c9781f; --danger:#c0392b; --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  .wrap{max-width:560px;margin:0 auto;padding:28px 18px 60px;}
+  .brand-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
+  .brand-row img{height:28px;}
+  .brand-sub{text-align:center;color:var(--ink-soft);font-size:12.5px;margin-bottom:26px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 20px;margin-bottom:18px;box-shadow:0 6px 24px rgba(20,40,80,.06);}
+  .card h1{font-size:17px;margin:0 0 4px;color:var(--navy);}
+  .card .desc{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;line-height:1.5;}
+  label{font-size:12.5px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px;}
+  .field{margin-bottom:14px;}
+  input[type=text]{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;font-size:14px;background:#fff;color:var(--ink);font-family:inherit;}
+  input[type=text]:focus{outline:none;border-color:var(--blue);}
+  .helper{font-size:11px;color:var(--ink-soft);margin-top:4px;}
+  .btn{border:none;border-radius:9px;padding:12px 16px;font-size:14px;font-weight:700;cursor:pointer;width:100%;
+    background:var(--blue);color:#fff;transition:.15s;}
+  .btn:hover{background:var(--navy);}
+  .btn:disabled{opacity:.55;cursor:not-allowed;}
+  .msg{font-size:13px;padding:10px 12px;border-radius:9px;margin-bottom:14px;display:none;}
+  .msg.show{display:block;}
+  .msg.error{background:#fdecea;color:var(--danger);}
+  .msg.info{background:var(--blue-light);color:var(--navy);}
+  .result-card{border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:6px;background:#fbfcfe;}
+  .result-card + .result-card{margin-top:12px;}
+  .r-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #eef1f6;font-size:13px;}
+  .r-row:last-child{border-bottom:none;}
+  .r-label{color:var(--ink-soft);}
+  .r-value{font-weight:600;text-align:right;}
+  .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+  .badge-blue{background:#e5eeff;color:var(--blue);}
+  .badge-green{background:#e7f8ee;color:var(--ok);}
+  .badge-orange{background:#fef1e2;color:var(--warn);}
+  .badge-gray{background:#eef1f6;color:var(--ink-soft);}
+  .ticket-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .ticket-head b{font-size:14.5px;color:var(--navy);}
+  .footnote{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:22px;line-height:1.6;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand-row">
+    <img src="data:image/png;base64,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" alt="OMRON">
+  </div>
+  <div class="brand-sub">Healthcare Service Management — Cek Status Service</div>
+
+  <div class="card">
+    <h1>Cek Status Perbaikan Alat Anda</h1>
+    <div class="desc">Masukkan Nomor Tiket Service <b>atau</b> Nomor Serial alat Anda, lalu konfirmasi dengan Nomor HP/WhatsApp yang didaftarkan saat menyerahkan alat.</div>
+
+    <div id="formMsg" class="msg error"></div>
+
+    <div class="field">
+      <label>Nomor Tiket Service / Nomor Serial Alat</label>
+      <input type="text" id="qRef" placeholder="Contoh: OEC-JKT-260831-0001 atau 202009VG" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Nomor HP / WhatsApp (konfirmasi)</label>
+      <input type="text" id="qPhone" placeholder="Contoh: 081234567890" autocomplete="off">
+      <div class="helper">Gunakan nomor yang sama dengan yang diberikan ke petugas Service Center saat penyerahan alat.</div>
+    </div>
+    <button class="btn" id="checkBtn">Cek Status</button>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <div class="footnote">
+    Butuh bantuan lebih lanjut? Hubungi Omron Healthcare di <b>0800 1401 567 (bebas pulsa)</b>.<br>
+    Halaman ini hanya menampilkan status tiket service milik Anda sendiri.
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   OMRON HEALTHCARE — CEK STATUS SERVICE (halaman publik untuk customer)
+   Penyaringan data dilakukan di SERVER (Cloudflare Worker), bukan di
+   browser — sehingga data customer lain tidak pernah terkirim ke sini.
+
+   >>> WAJIB DIISI: ganti dengan URL Cloudflare Worker Anda setelah
+   di-deploy. Lihat PANDUAN-SETUP.md bagian "Cloudflare Worker". <<<
+   ========================================================================= */
+const WORKER_URL = "https://GANTI-DENGAN-URL-WORKER-ANDA.workers.dev";
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(iso){
+  if(!iso) return '-';
+  const d = new Date(iso);
+  if(isNaN(d)) return '-';
+  const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+function statusBadgeClass(status){
+  const map = {
+    "Diterima SC":"badge-blue","Diterima PC":"badge-blue","Dalam Perbaikan":"badge-orange",
+    "Menunggu Sparepart":"badge-orange","Selesai":"badge-green","Dikirim":"badge-green",
+    "Diambil Customer":"badge-gray","Diterima Customer":"badge-gray"
+  };
+  return map[status] || 'badge-gray';
+}
+function statusFriendly(status){
+  const map = {
+    "Diterima SC":"Alat sudah diterima di Service Center Pusat",
+    "Diterima PC":"Alat sudah diterima di Pickup Center",
+    "Dalam Perbaikan":"Alat sedang dalam proses perbaikan",
+    "Menunggu Sparepart":"Menunggu ketersediaan sparepart",
+    "Selesai":"Perbaikan selesai, alat siap diambil/dikirim",
+    "Dikirim":"Alat sedang dalam pengiriman ke Anda",
+    "Diambil Customer":"Alat sudah diambil oleh customer",
+    "Diterima Customer":"Alat sudah diterima kembali oleh customer"
+  };
+  return map[status] || status || '-';
+}
+function lokasiLabel(c){
+  if(c.lokasiTipe==='pusat') return 'Service Center Pusat';
+  if(c.lokasiTipe==='cabang') return 'Service Center Cabang';
+  if(c.lokasiTipe==='pickup') return 'Pickup Center';
+  return '-';
+}
+
+function showMsg(text){
+  const el = document.getElementById('formMsg');
+  if(!text){ el.classList.remove('show'); el.textContent=''; return; }
+  el.textContent = text; el.classList.add('show');
+}
+
+function renderResults(list){
+  const area = document.getElementById('resultArea');
+  if(!list.length){ area.innerHTML=''; return; }
+  area.innerHTML = list.map(c=>{
+    const garansi = c.statusGaransi==='Under Warranty' ? '<span class="badge badge-green">Under Warranty</span>'
+      : c.statusGaransi==='Out of Warranty' ? '<span class="badge badge-orange">Out of Warranty</span>' : '-';
+    return `
+    <div class="result-card">
+      <div class="ticket-head">
+        <b>${esc(c.ticket)}</b>
+        <span class="badge ${statusBadgeClass(c.repairStatus)}">${esc(c.repairStatus)||'-'}</span>
+      </div>
+      <div class="r-row"><span class="r-label">Status</span><span class="r-value">${esc(statusFriendly(c.repairStatus))}</span></div>
+      <div class="r-row"><span class="r-label">Lokasi Service</span><span class="r-value">${esc(lokasiLabel(c))}</span></div>
+      <div class="r-row"><span class="r-label">Produk</span><span class="r-value">${esc(c.kategori)||'-'} ${esc(c.model)||''}</span></div>
+      <div class="r-row"><span class="r-label">No. Serial</span><span class="r-value">${esc(c.serialNo)||'-'}</span></div>
+      <div class="r-row"><span class="r-label">Status Garansi</span><span class="r-value">${garansi}</span></div>
+      <div class="r-row"><span class="r-label">Tgl Diterima</span><span class="r-value">${fmtDate(c.tglTerima)}</span></div>
+      <div class="r-row"><span class="r-label">Tgl Selesai</span><span class="r-value">${c.tglSelesai?fmtDate(c.tglSelesai):'-'}</span></div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('checkBtn').addEventListener('click', async ()=>{
+  const ref = document.getElementById('qRef').value.trim();
+  const phone = document.getElementById('qPhone').value.trim();
+  showMsg(''); document.getElementById('resultArea').innerHTML = '';
+
+  if(!ref || !phone){ showMsg('Mohon isi Nomor Tiket/Serial dan Nomor HP terlebih dahulu.'); return; }
+  if(WORKER_URL.includes('GANTI-DENGAN-URL-WORKER-ANDA')){
+    showMsg('Sistem belum terhubung ke server pengecekan (WORKER_URL belum diisi Admin).');
+    return;
+  }
+
+  const btn = document.getElementById('checkBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Mencari...';
+
+  try{
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ ref, phone })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      showMsg(data.error || 'Terjadi kesalahan. Silakan coba lagi.');
+    } else if(!data.results || !data.results.length){
+      showMsg('Data tidak ditemukan. Pastikan Nomor Tiket/Serial dan Nomor HP yang Anda masukkan sudah benar.');
+    } else {
+      renderResults(data.results);
+    }
+  }catch(e){
+    console.error(e);
+    showMsg('Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Cek Status';
+  }
+});
+
+document.getElementById('qPhone').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('checkBtn').click(); });
+</script>
+</body>
+</html>
