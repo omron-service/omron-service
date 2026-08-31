@@ -749,6 +749,68 @@ function sparepartLines(c){
   return arr;
 }
 
+/* ---------------- Service Report Excel (Formulir Perbaikan) ---------------- */
+function downloadServiceReportExcel(c){
+  const items = sparepartLines(c);
+  let total = 0;
+  items.forEach(it=>{ total += (Number(it.harga)||0) * (Number(it.qty)||0); });
+
+  const garansiText = c.statusGaransi==='Under Warranty' ? 'YA (Under Warranty)' : (c.statusGaransi==='Out of Warranty' ? 'TIDAK (Out of Warranty)' : (c.statusGaransi||'-'));
+
+  // Build sheet data as a grid of rows (array of arrays), matching the paper form layout.
+  const rows = [];
+  const r = (arr)=>{ rows.push(arr); return rows.length-1; }; // returns row index (0-based)
+
+  r(['FORMULIR PERBAIKAN', '', '', '', '', 'omron']);
+  r([]);
+  r(['NO.', c.ticket||'-', '', 'KONTRAK ID', '']);
+  r(['STATUS GARANSI', garansiText, '', '', '']);
+  r(['TANGGAL TERIMA', fmtDate(c.tglTerima), '', 'NAMA PEMILIK', c.namaCustomer||'-']);
+  r(['TANGGAL SELESAI', fmtDate(c.tglSelesai), '', 'NO. TELEPON', c.hp1||'-']);
+  r(['ALAMAT', c.alamat||'-', '', '', '']);
+  r(['PRODUK', c.model||'-', '', 'NO. SERIAL', c.serialNo||'-']);
+  r(['AKSESORIS', c.aksesoris||'-', '', '', '']);
+  r(['PROBLEM', c.keluhan||'-', '', '', '']);
+  r(['KESIMPULAN', c.analisaTeknisi||'-', '', '', '']);
+  r([]);
+  const sparepartHeaderRow = r(['Nama Spare Part', 'Kode Spare Part', 'Jumlah', 'Harga Rp.', '']);
+  const firstItemRow = rows.length;
+  const rowsToShow = Math.max(items.length, 3);
+  for(let i=0;i<rowsToShow;i++){
+    const it = items[i];
+    r([ it?it.nama:'', it?it.kode:'', it?it.qty:'', it?it.harga:'', '' ]);
+  }
+  const totalRow = r(['Total', '', '', total, '']);
+  r([]);
+  r(['Syarat & Ketentuan']);
+  r(['1. Garansi tidak berlaku jika kerusakan disebabkan oleh kesalahan penggunaan atau efek lingkungan (hama, serangga, terkena cairan, robek, terbakar, dll).']);
+  r(['2. Omron Healthcare Service Center tidak bertanggung jawab atas kehilangan dan kerusakan alat yang disebabkan oleh FORCE MAJEURE (gempa bumi, banjir, kebakaran, pencurian, perampokan, dll).']);
+  r([]);
+  r(['Pemilik :', '', '', 'Teknisi :', '']);
+  r([]);
+  r(['PT. Omron Healthcare Indonesia — Menara Bidakara 1 Lt. 22, Jl. Jend. Gatot Subroto Kav. 71-73, Jakarta - Indonesia 12870']);
+  r(['Telp.: (62-21) 2949 7500  ·  Fax.: (62-21) 2949 7555']);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [ {wch:20}, {wch:26}, {wch:6}, {wch:18}, {wch:22} ];
+  ws['!merges'] = [
+    XLSX.utils.decode_range('A1:E1'), // title row spans, brand sits visually at F via separate cell below
+    XLSX.utils.decode_range('B3:C3'), // NO. value
+    XLSX.utils.decode_range('E3:E3'),
+    XLSX.utils.decode_range('B4:E4'), // STATUS GARANSI value
+    XLSX.utils.decode_range('B7:E7'), // ALAMAT value
+    XLSX.utils.decode_range('B9:E9'), // AKSESORIS value
+    XLSX.utils.decode_range('B10:E10'), // PROBLEM value
+    XLSX.utils.decode_range('B11:E11'), // KESIMPULAN value
+  ];
+  // Total row: merge label across first 3 cols
+  ws['!merges'].push(XLSX.utils.decode_range(`A${totalRow+1}:C${totalRow+1}`));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Service Report');
+  XLSX.writeFile(wb, `ServiceReport-${c.ticket}.xlsx`);
+}
+
 /* =========================================================================
    RENDER
    ========================================================================= */
@@ -974,7 +1036,13 @@ function renderCustomerTable(list, withActions){
         <td><span class="badge ${c.statusGaransi==='Out of Warranty'?'badge-orange':'badge-green'}">${esc(c.statusGaransi)||'-'}</span></td>
         <td><span class="badge ${statusBadgeClass(c.repairStatus)}">${esc(c.repairStatus)||'-'}</span></td>
         <td>${fmtDate(c.tglTerima)}</td>
-        ${withActions?`<td><span class="link-cell" data-action="view-customer" data-id="${c.id}">Lihat / Edit</span></td>`:''}
+        ${withActions?`<td>
+          <span class="link-cell" data-action="view-customer" data-id="${c.id}" title="Lihat">L</span>
+          &nbsp;|&nbsp;
+          <span class="link-cell" data-action="view-customer" data-id="${c.id}" title="Edit">E</span>
+          &nbsp;|&nbsp;
+          <span class="link-cell" data-action="download-service-report" data-id="${c.id}" title="Download Service Report (Excel)">D</span>
+        </td>`:''}
       </tr>`).join('')}
     </tbody>
   </table></div>`;
@@ -2000,6 +2068,11 @@ function handleAction(action, el){
 
   if(action==='new-customer'){ openCustomerForm(el.getAttribute('data-tipe'), null); return; }
   if(action==='view-customer'){ openCustomerForm(currentTipeFromId(el.getAttribute('data-id')), el.getAttribute('data-id')); return; }
+  if(action==='download-service-report'){
+    const c = state.customers.find(x=>x.id===el.getAttribute('data-id'));
+    if(c) downloadServiceReportExcel(c);
+    return;
+  }
   if(action==='save-customer'){ saveCustomerFromForm(); return; }
   if(action==='delete-customer'){
     if(confirm('Hapus tiket ini? Sparepart yang sudah terpakai pada tiket ini akan dikembalikan ke stok.')){
