@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>OMRON Healthcare — Service Management System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --navy:#0b2f6b;
+    --blue:#0f4fb0;
+    --blue-light:#e8f0fd;
+    --sky:#1596c9;
+    --orange:#f2932d;
+    --bg:#f4f6fb;
+    --card:#ffffff;
+    --border:#e1e6ef;
+    --ink:#152238;
+    --ink-soft:#5c6b83;
+    --ok:#1f9d55;
+    --warn:#c9781f;
+    --danger:#c0392b;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  #app{display:flex;min-height:100vh;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:250px;flex-shrink:0;background:linear-gradient(180deg,var(--navy),#08234f);
+    color:#fff;display:flex;flex-direction:column;padding:20px 0;
+  }
+  .brand{padding:0 20px 18px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:14px;}
+  .brand .logo{font-weight:800;font-size:20px;letter-spacing:.5px;}
+  .brand .logo span{color:var(--orange);}
+  .brand .sub{font-size:11.5px;color:#b7c6e6;margin-top:3px;}
+  .nav-group{margin-bottom:6px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;
+    font-size:14px;color:#dbe6fb;border-left:3px solid transparent;transition:.15s;
+  }
+  .nav-item:hover{background:rgba(255,255,255,.06);}
+  .nav-item.active{background:rgba(255,255,255,.1);border-left-color:var(--orange);color:#fff;font-weight:600;}
+  .nav-icon{width:18px;text-align:center;font-size:15px;}
+  .subnav{padding-left:34px;}
+  .subnav .nav-item{padding:8px 14px;font-size:13px;color:#b7c6e6;}
+  .subnav .nav-item.active{color:#fff;}
+  .sidebar-foot{margin-top:auto;padding:14px 20px 0;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:#93a6cc;}
+
+  /* ---------- Topbar ---------- */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{
+    background:#fff;border-bottom:1px solid var(--border);padding:12px 26px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .topbar h1{font-size:17px;margin:0;color:var(--navy);}
+  .topbar .crumbs{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .role-box{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--blue-light);
+    padding:6px 12px;border-radius:8px;}
+  .role-box select{border:none;background:transparent;font-weight:600;color:var(--navy);font-size:13px;}
+  .content{padding:22px 26px;overflow-y:auto;}
+
+  /* ---------- Generic UI ---------- */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;}
+  .card h2{font-size:15px;margin:0 0 4px;color:var(--navy);}
+  .card .desc{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .btn{
+    border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:.15s;
+  }
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:var(--navy);}
+  .btn-outline{background:#fff;color:var(--blue);border:1px solid var(--blue);}
+  .btn-outline:hover{background:var(--blue-light);}
+  .btn-green{background:var(--ok);color:#fff;}
+  .btn-orange{background:var(--orange);color:#fff;}
+  .btn-danger{background:#fdecea;color:var(--danger);}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  select,input[type=text],input[type=date],input[type=number],textarea{
+    width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;
+    background:#fff;color:var(--ink);font-family:inherit;
+  }
+  textarea{resize:vertical;min-height:56px;}
+  label{font-size:12px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:4px;}
+  .field{margin-bottom:12px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 16px;}
+  .section-title{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--blue);margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--blue-light);}
+  .section-title:first-child{margin-top:0;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;background:#f6f8fc;color:var(--ink-soft);font-weight:700;padding:9px 10px;
+     border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:9px 10px;border-bottom:1px solid #eef1f6;white-space:nowrap;}
+  tr:hover td{background:#fafcff;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+  .badge-blue{background:#e5eeff;color:var(--blue);}
+  .badge-green{background:#e7f8ee;color:var(--ok);}
+  .badge-orange{background:#fef1e2;color:var(--warn);}
+  .badge-red{background:#fdecea;color:var(--danger);}
+  .badge-gray{background:#eef1f6;color:var(--ink-soft);}
+  .empty{padding:30px;text-align:center;color:var(--ink-soft);font-size:13px;}
+  .tag{font-size:11px;color:var(--ink-soft);}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px;}
+  .kpi{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+  .kpi .num{font-size:24px;font-weight:800;color:var(--navy);}
+  .kpi .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,.45);display:flex;align-items:flex-start;
+    justify-content:center;padding:30px 16px;overflow-y:auto;z-index:100;}
+  .modal{background:#fff;border-radius:12px;max-width:880px;width:100%;padding:24px 26px;margin-bottom:40px;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .modal-head h2{margin:0;font-size:17px;color:var(--navy);}
+  .close-x{cursor:pointer;font-size:20px;color:var(--ink-soft);border:none;background:none;line-height:1;}
+  .pill-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .pill-tabs button{border:1px solid var(--border);background:#fff;padding:7px 14px;border-radius:20px;
+    font-size:12.5px;cursor:pointer;color:var(--ink-soft);font-weight:600;}
+  .pill-tabs button.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .sparepart-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;margin-bottom:8px;}
+  .checkbox-row{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;}
+  .checkbox-row input{width:auto;}
+  .helper{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .footer-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+  .search-box{padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;min-width:220px;}
+  .stock-neg{color:var(--danger);font-weight:700;}
+  .stock-low{color:var(--warn);font-weight:700;}
+  .link-cell{color:var(--blue);cursor:pointer;font-weight:600;}
+  .banner{background:#fff8e8;border:1px solid #f2d98b;color:#7a5c00;padding:10px 14px;border-radius:8px;
+    font-size:12.5px;margin-bottom:16px;}
+  .banner.blue{background:var(--blue-light);border-color:#bcd4f7;color:var(--navy);}
+  .loading-screen{display:flex;align-items:center;justify-content:center;height:100vh;width:100%;
+    color:var(--ink-soft);font-size:14px;}
+  /* ---------- Login screen ---------- */
+  .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;width:100%;
+    background:linear-gradient(135deg,var(--navy),#08234f);}
+  .login-box{background:#fff;border-radius:14px;padding:32px 30px;width:100%;max-width:360px;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);}
+  .login-box .logo{font-weight:800;font-size:22px;letter-spacing:.5px;color:var(--navy);text-align:center;}
+  .login-box .logo span{color:var(--orange);}
+  .login-box .sub{font-size:12px;color:var(--ink-soft);text-align:center;margin:4px 0 22px;}
+  .login-error{background:#fdecea;color:var(--danger);font-size:12.5px;padding:8px 10px;border-radius:7px;margin-bottom:12px;display:none;}
+  .login-error.show{display:block;}
+  .login-box .btn{width:100%;justify-content:center;margin-top:6px;}
+  .login-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:16px;line-height:1.5;}
+  .logout-btn{background:none;border:none;color:var(--ink-soft);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:#c3cee0;border-radius:6px;}
+  @media(max-width:900px){
+    #app{flex-direction:column;}
+    .sidebar{width:100%;}
+  }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading-screen">Memuat sistem…</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Firebase (free tier) — menyediakan Login (Authentication) & Database online (Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+/* =========================================================================
+   OMRON HEALTHCARE — SERVICE MANAGEMENT SYSTEM (online version)
+   Single-file HTML/JS app. Data persists via Firebase Firestore (shared,
+   real-time, accessible online). Login via Firebase Authentication.
+
+   >>> WAJIB DIISI: ganti nilai di bawah ini dengan konfigurasi project
+   Firebase Anda sendiri (gratis). Lihat PANDUAN-SETUP.md untuk caranya. <<<
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "omron-service-xxxx.firebaseapp.com",
+  projectId: "omron-service-xxxx",
+  storageBucket: "omron-service-xxxx.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcd1234"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+// Semua data tersimpan dalam satu dokumen bersama ini di Firestore.
+const STATE_DOC = db.collection('omron_service').doc('state');
+
+const STORAGE_KEY = 'omron-service-db-v1'; // (tidak lagi dipakai, disisakan agar kompatibel)
+
+/* ---------------- Reference data ---------------- */
+// Default seed values for editable master data (Setting tab). These only populate
+// state.refData the first time the app runs; after that, everything is editable/uploadable.
+const DEFAULT_PROVINCES = {
+  "DKI Jakarta": ["Jakarta Pusat","Jakarta Utara","Jakarta Barat","Jakarta Selatan","Jakarta Timur"],
+  "Jawa Barat": ["Bandung","Bekasi","Bogor","Depok","Cimahi","Cirebon"],
+  "Banten": ["Tangerang","Tangerang Selatan","Serang","Cilegon"],
+  "Jawa Tengah": ["Semarang","Surakarta (Solo)","Magelang","Tegal","Pekalongan"],
+  "DI Yogyakarta": ["Yogyakarta","Sleman","Bantul"],
+  "Jawa Timur": ["Surabaya","Malang","Kediri","Sidoarjo","Jember"],
+  "Bali": ["Denpasar","Badung","Gianyar"],
+  "Sumatera Utara": ["Medan","Binjai","Pematangsiantar"],
+  "Sumatera Selatan": ["Palembang","Lubuklinggau"],
+  "Kalimantan Timur": ["Balikpapan","Samarinda"],
+  "Sulawesi Selatan": ["Makassar","Parepare"],
+  "Lainnya": ["(isi manual di catatan)"]
+};
+
+const DEFAULT_CATEGORIES = {
+  "ARM": ["HEM-7120","HEM-7130","HEM-7156","HEM-7155","HEM-7361T","HEM-7280T"],
+  "WRIST ARM": ["HEM-6121","HEM-6161","HEM-6181"],
+  "BLOOD GLUCOSE MONITOR": ["HGM-111","HGM-112"],
+  "BODY COMPOSITION MONITOR": ["HBF-222T","HBF-375","HBF-701"],
+  "DIGITAL WEIGHT SCALE": ["HN-289","HN-286","HN-300T2"],
+  "COMPRESSOR NEBULIZER": ["NE-C28","NE-C29","NE-C803","NE-C900"],
+  "ULTRASONIC NEBULIZER": ["NE-U17","NE-U100"],
+  "FOREHEAD THERMOMETER": ["MC-720","MC-720web"],
+  "EAR THERMOMETER": ["MC-522W","MC-523"],
+  "PEN THERMOMETER": ["MC-246"],
+  "MEDICAL": ["Lainnya (isi manual)"],
+  "TENS": ["HV-F013","HV-F127","HV-F310","HV-F013EV"],
+  "OTHERS": ["Lainnya (isi manual)"]
+};
+
+const WARRANTY_STATUS = ["Under Warranty","Out of Warranty"];
+const DEFAULT_WARRANTY_PERIOD = ["1","2","3","4","5","6"];
+const DEFAULT_ASAL_PRODUK = ["LEU","EU-DRC","AMS","IDC","APT/ TKO","CV/ PT/ RS","ALPRO"];
+const REMARKS_OPT = ["Compliance Check/ Sensor Check","Repair","Replace Product/ Claim","Unrepairable/ Return to Customer","Disagree with Service Fee"];
+const REPAIR_STATUS = ["Diterima SC","Diterima PC","Dalam Perbaikan","Menunggu Sparepart","Selesai","Dikirim","Diambil Customer","Diterima Customer"];
+const BANKS = ["Alfamart","Indomaret","VA BRI","VA BCA","VA BNI","VA Permata","VA Mandiri"];
+
+function buildDefaultRefData(){
+  const provinces = Object.keys(DEFAULT_PROVINCES);
+  const cities = [];
+  provinces.forEach(p=> DEFAULT_PROVINCES[p].forEach(k=> cities.push({ kota:k, provinsi:p })) );
+  const categories = Object.keys(DEFAULT_CATEGORIES);
+  const models = [];
+  categories.forEach(k=> DEFAULT_CATEGORIES[k].forEach(mo=> models.push({ model:mo, kategori:k })) );
+  return {
+    provinces: provinces.slice(),
+    cities,
+    categories: categories.slice(),
+    models,
+    warrantyPeriod: DEFAULT_WARRANTY_PERIOD.slice(),
+    asalProduk: DEFAULT_ASAL_PRODUK.slice(),
+  };
+}
+
+// Config for the Setting tab: how each master-data list is displayed, edited, and parsed from Excel.
+const REF_CONFIGS = {
+  provinces: {
+    title:'Data Provinsi', simple:true, colLabel:'Nama Provinsi', excelCol:'Provinsi',
+    aliases:['provinsi','province','nama','name'],
+  },
+  categories: {
+    title:'Data Produk Kategori', simple:true, colLabel:'Nama Kategori', excelCol:'Kategori',
+    aliases:['kategori','category','produkkategori','nama','name'],
+  },
+  warrantyPeriod: {
+    title:'Data Warranty Period (tahun)', simple:true, colLabel:'Periode (tahun)', excelCol:'Warranty Period',
+    aliases:['warrantyperiod','periode','period','tahun','warranty'],
+  },
+  asalProduk: {
+    title:'Data Asal Produk', simple:true, colLabel:'Asal Produk', excelCol:'Asal Produk',
+    aliases:['asalproduk','asal','origin','nama','name'],
+  },
+  cities: {
+    title:'Data Kota/Kabupaten', simple:false,
+    field1:'kota', col1Label:'Kota/Kabupaten', excelCol1:'Kota', aliases1:['kota','city','kabupaten','nama','name'],
+    field2:'provinsi', col2Label:'Provinsi', excelCol2:'Provinsi', aliases2:['provinsi','province'],
+    field2Options: ()=> state.refData.provinces,
+    parentKey: 'provinces',
+  },
+  models: {
+    title:'Data Model Alat', simple:false,
+    field1:'model', col1Label:'Model Alat', excelCol1:'Model', aliases1:['model'],
+    field2:'kategori', col2Label:'Kategori', excelCol2:'Kategori', aliases2:['kategori','category'],
+    field2Options: ()=> state.refData.categories,
+    parentKey: 'categories',
+  },
+};
+
+function getProvinceList(){ return (state.refData && state.refData.provinces) || []; }
+function getCitiesForProvince(prov){ return ((state.refData && state.refData.cities) || []).filter(c=>c.provinsi===prov).map(c=>c.kota); }
+function getCategoryList(){ return (state.refData && state.refData.categories) || []; }
+function getModelsForCategory(kat){ return ((state.refData && state.refData.models) || []).filter(m=>m.kategori===kat).map(m=>m.model); }
+function getWarrantyPeriods(){ return (state.refData && state.refData.warrantyPeriod) || []; }
+function getAsalProdukList(){ return (state.refData && state.refData.asalProduk) || []; }
+
+// Ticket number city codes, e.g. OEC-JKT-260830-0001. Pusat is always JKT (fixed).
+// Cabang/Pickup codes are resolved from their "Kota" field; unlisted cities fall back
+// to the first 3 letters of the city name (uppercased).
+const CITY_CODES = {
+  'jakarta':'JKT',
+  'medan':'MDN',
+  'padang':'PDG',
+  'palembang':'PLM',
+  'bandung':'BDG',
+  'yogyakarta':'YOG','yogya':'YOG','jogja':'YOG','jogjakarta':'YOG','diyogyakarta':'YOG','sleman':'YOG','bantul':'YOG',
+  'semarang':'SMG',
+  'surabaya':'SBY',
+  'balikpapan':'BPN',
+  'bali':'BLI','denpasar':'BLI','badung':'BLI','gianyar':'BLI',
+  'manado':'MND',
+  'makassar':'MKS','makasar':'MKS',
+};
+
+/* ---------------- Field config (drives the big form) ---------------- */
+const CUSTOMER_SECTIONS = [
+  { title: "Data Pelanggan", fields: [
+    { key:"namaCustomer", label:"Nama Customer", type:"text", required:true },
+    { key:"hp1", label:"No. HP / WhatsApp 1", type:"text", required:true },
+    { key:"hp2", label:"No. HP / WhatsApp 2", type:"text" },
+    { key:"alamat", label:"Alamat", type:"textarea" },
+    { key:"provinsi", label:"Provinsi", type:"select-province" },
+    { key:"kota", label:"Kota", type:"select-city" },
+    { key:"tglTerima", label:"Tanggal Alat Diterima", type:"date" },
+    { key:"tglSelesai", label:"Tanggal Alat Selesai", type:"date" },
+  ]},
+  { title: "Data Produk", fields: [
+    { key:"kategori", label:"Produk Kategori", type:"select-category" },
+    { key:"model", label:"Model Alat", type:"select-model" },
+    { key:"serialNo", label:"Serial No. Alat", type:"text" },
+    { key:"aksesoris", label:"Aksesoris", type:"text" },
+    { key:"statusGaransi", label:"Status Garansi", type:"select", options:WARRANTY_STATUS },
+    { key:"warrantyPeriod", label:"Warranty Period (tahun)", type:"select-warranty" },
+    { key:"asalProduk", label:"Asal Produk", type:"select-asal" },
+  ]},
+  { title: "Data Servis", fields: [
+    { key:"keluhan", label:"Keluhan Pelanggan", type:"textarea" },
+    { key:"analisaTeknisi", label:"Analisa Teknisi", type:"textarea" },
+    { key:"symptom", label:"Symptom (kode)", type:"text" },
+    { key:"leadtime", label:"Leadtime (hari)", type:"text" },
+    { key:"catatan", label:"Catatan", type:"textarea" },
+    { key:"remarks", label:"Remarks", type:"select", options:REMARKS_OPT },
+    { key:"repairStatus", label:"Repair Status", type:"select", options:REPAIR_STATUS },
+  ]},
+];
+
+/* ---------------- Global state ---------------- */
+let state = null; // loaded async
+let ui = {
+  tab: "dashboard",
+  subtab: null,
+  role: "pusat",          // pusat | cabang | pickup | resepsionis
+  roleRef: null,          // branch/pickup id when role is cabang/pickup
+  modal: null,            // {type, ...} - used for small popups (branch, payment, stock tx, opname)
+  page: null,             // {type:'customer-form', ...} - full in-page form (not a popup)
+  search: "",
+};
+
+function defaultState(){
+  return {
+    branches: [],   // {id,nama,partner,kota,createdAt}
+    pickups: [],    // {id,nama,partner,kota,createdAt}
+    customers: [],  // unified list, each has "lokasiTipe": pusat|cabang|pickup, "lokasiId"
+    seq: { pusat:0, cabang:{}, pickup:{}, byCity:{} },
+    sparepartPusat: { stock: [], tx: [] },
+    sparepartCabang: {}, // { [branchId]: {stock:[], tx:[]} }
+    payments: {}, // { [ticketNo]: {nominal, bank, vaCode, generatedAt, paid} }
+    refData: buildDefaultRefData(), // editable master data (Setting tab): provinces, cities, categories, models, warrantyPeriod, asalProduk
+  };
+}
+
+// Guards against older saved states that predate the refData / Setting tab feature.
+function ensureRefDataShape(){
+  if(!state.refData) state.refData = buildDefaultRefData();
+  if(!Array.isArray(state.refData.provinces)) state.refData.provinces = [];
+  if(!Array.isArray(state.refData.cities)) state.refData.cities = [];
+  if(!Array.isArray(state.refData.categories)) state.refData.categories = [];
+  if(!Array.isArray(state.refData.models)) state.refData.models = [];
+  if(!Array.isArray(state.refData.warrantyPeriod)) state.refData.warrantyPeriod = [];
+  if(!Array.isArray(state.refData.asalProduk)) state.refData.asalProduk = [];
+}
+
+async function loadState(){
+  try{
+    const snap = await STATE_DOC.get();
+    state = (snap.exists && snap.data() && snap.data().json) ? JSON.parse(snap.data().json) : defaultState();
+  }catch(e){
+    console.error('Gagal memuat data dari Firestore', e);
+    state = defaultState();
+  }
+  ensureRefDataShape();
+  migrateStockSync();
+  render();
+  // Sinkron real-time: jika user lain menyimpan perubahan, tampilan ini ikut update otomatis.
+  STATE_DOC.onSnapshot((snap)=>{
+    if(!snap.exists || !snap.data() || !snap.data().json) return;
+    if(snap.metadata.hasPendingWrites) return; // abaikan echo dari penyimpanan sendiri
+    try{
+      state = JSON.parse(snap.data().json);
+      ensureRefDataShape();
+      render();
+    }catch(e){ console.error('Gagal sinkronisasi data', e); }
+  });
+}
+let saveTimer=null;
+function saveState(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{
+      await STATE_DOC.set({
+        json: JSON.stringify(state),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: (auth.currentUser && auth.currentUser.email) || 'unknown'
+      });
+    }
+    catch(e){ console.error('Gagal menyimpan data ke Firestore', e); alert('Gagal menyimpan data. Periksa koneksi internet Anda.'); }
+  }, 150);
+}
+
+// One-time reconciliation: tickets saved before the auto stock-deduction feature existed
+// carry sparepart usage that was never subtracted from stock. On load, any ticket missing
+// the _stockSynced flag gets its usage applied once, then gets flagged so it's never re-applied.
+function migrateStockSync(){
+  if(!state.customers || !state.customers.length) return;
+  let changed = false;
+  state.customers.forEach(c=>{
+    if(!c._stockSynced){
+      adjustStockForTicket(null, c); // also sets c._stockSynced = true
+      changed = true;
+    }
+  });
+  if(changed) saveState();
+}
+
+function renameTicketRefs(txList, oldTicket, newTicket){
+  if(!txList) return;
+  txList.forEach(t=>{ if(t.ticket===oldTicket) t.ticket = newTicket; });
+}
+
+// Renumbers every existing ticket (any format) into OEC-{KodeKota}-{YYMMDD}-{urut} using each
+// ticket's own creation date, grouped and sequenced per city-code+date so history stays in order.
+// Also updates references in Status Pembayaran and Sparepart Stok transaction history.
+// Safe to run more than once — result is deterministic from createdAt + location, not from
+// whatever the ticket number currently is.
+function migrateTicketFormat(){
+  if(!state.customers || !state.customers.length) return { renamed:0, total:0 };
+  const groups = {};
+  state.customers.forEach(c=>{
+    const cityCode = cityCodeForLocation(c.lokasiTipe, c.lokasiId);
+    const d = c.createdAt ? new Date(c.createdAt) : new Date();
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    const key = cityCode+'_'+yy+mm+dd;
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
+
+  let renamed = 0;
+  if(!state.seq.byCity) state.seq.byCity = {};
+  Object.keys(groups).forEach(key=>{
+    const [cityCode, dateCode] = key.split('_');
+    const list = groups[key].slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    list.forEach((c, idx)=>{
+      const seq = idx+1;
+      const oldTicket = c.ticket;
+      const newTicket = `OEC-${cityCode}-${dateCode}-${String(seq).padStart(4,'0')}`;
+      if(oldTicket !== newTicket){
+        if(state.payments[oldTicket]){
+          state.payments[newTicket] = state.payments[oldTicket];
+          delete state.payments[oldTicket];
+        }
+        renameTicketRefs(state.sparepartPusat.tx, oldTicket, newTicket);
+        Object.keys(state.sparepartCabang).forEach(bId=>renameTicketRefs(state.sparepartCabang[bId].tx, oldTicket, newTicket));
+        c.ticket = newTicket;
+        renamed++;
+      }
+    });
+    state.seq.byCity[key] = Math.max(state.seq.byCity[key]||0, list.length);
+  });
+  return { renamed, total: state.customers.length };
+}
+
+/* ---------------- Helpers ---------------- */
+function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10).replace(/-/g,''); }
+function fmtDate(s){ if(!s) return '-'; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtMoney(n){ n=Number(n||0); return 'Rp '+n.toLocaleString('id-ID'); }
+function initials(str){ return (str||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,4) || 'XX'; }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function branchName(id){ const b=state.branches.find(x=>x.id===id); return b?b.nama:'-'; }
+function pickupName(id){ const p=state.pickups.find(x=>x.id===id); return p?p.nama:'-'; }
+
+function resolveCityCode(kota){
+  const norm = String(kota||'').toLowerCase().replace(/[^a-z]/g,'');
+  if(CITY_CODES[norm]) return CITY_CODES[norm];
+  const letters = String(kota||'').replace(/[^a-zA-Z]/g,'').toUpperCase();
+  return letters ? letters.slice(0,3) : 'XXX';
+}
+
+function cityCodeForLocation(lokasiTipe, lokasiId){
+  if(lokasiTipe==='pusat') return 'JKT'; // fixed code for Service Center Pusat
+  if(lokasiTipe==='cabang'){ const b=state.branches.find(x=>x.id===lokasiId); return resolveCityCode(b?b.kota:''); }
+  if(lokasiTipe==='pickup'){ const p=state.pickups.find(x=>x.id===lokasiId); return resolveCityCode(p?p.kota:''); }
+  return 'XXX';
+}
+
+function todayCompact(){ // YYMMDD
+  const d = new Date();
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return yy+mm+dd;
+}
+
+// Ticket format: OEC-{KodeKota}-{YYMMDD}-{urut4}. Sequence resets automatically each day
+// because it's keyed by city-code + date; e.g. OEC-JKT-260830-0001.
+function nextTicket(lokasiTipe, lokasiId){
+  if(!state.seq.byCity) state.seq.byCity = {};
+  const cityCode = cityCodeForLocation(lokasiTipe, lokasiId);
+  const dateCode = todayCompact();
+  const key = cityCode+'_'+dateCode;
+  state.seq.byCity[key] = (state.seq.byCity[key]||0)+1;
+  return `OEC-${cityCode}-${dateCode}-${String(state.seq.byCity[key]).padStart(4,'0')}`;
+}
+
+function statusBadgeClass(status){
+  const map = {
+    "Diterima SC":"badge-blue","Diterima PC":"badge-blue","Dalam Perbaikan":"badge-orange",
+    "Menunggu Sparepart":"badge-orange","Selesai":"badge-green","Dikirim":"badge-green",
+    "Diambil Customer":"badge-gray","Diterima Customer":"badge-gray"
+  };
+  return map[status] || 'badge-gray';
+}
+
+function visibleCustomers(lokasiTipe){
+  let list = state.customers.filter(c=>c.lokasiTipe===lokasiTipe);
+  if(lokasiTipe==='cabang' && ui.role==='cabang') list = list.filter(c=>c.lokasiId===ui.roleRef);
+  if(lokasiTipe==='pickup' && ui.role==='pickup') list = list.filter(c=>c.lokasiId===ui.roleRef);
+  if(ui.search){
+    const q = ui.search.toLowerCase();
+    list = list.filter(c => (c.ticket||'').toLowerCase().includes(q) ||
+      (c.namaCustomer||'').toLowerCase().includes(q) ||
+      (c.serialNo||'').toLowerCase().includes(q) ||
+      (c.model||'').toLowerCase().includes(q));
+  }
+  return list.slice().sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+}
+
+function branchStockStore(branchId){
+  if(!state.sparepartCabang[branchId]) state.sparepartCabang[branchId] = {stock:[], tx:[]};
+  return state.sparepartCabang[branchId];
+}
+
+/* ---------------- Excel export ---------------- */
+function exportExcel(filename, rows, sheetName){
+  if(!rows || !rows.length){ alert('Tidak ada data untuk diunduh.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sheet1');
+  XLSX.writeFile(wb, filename);
+}
+
+/* ---------------- Excel import (Sparepart Stok) ---------------- */
+const STOCK_HEADER_MAP = {
+  kode: ['pimcode','kode','kodesparepart','partcode','sparepartcode','code','itemcode'],
+  nama: ['partname','nama','namasparepart','name','description','deskripsi'],
+  model: ['model'],
+  kelas: ['class','kelas','category','kategori'],
+  status: ['status'],
+  harga: ['price','harga','unitprice','hargasatuan'],
+  qty: ['qty','quantity','jumlah','stok','stock'],
+  lokasi: ['lokasi','location','branch','cabang','lokasitujuan','cabangtujuan','tujuan','lokasiasal','cabangasal','asal'],
+};
+function normHeader(h){ return String(h||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function mapStockHeader(h){
+  const n = normHeader(h);
+  for(const key in STOCK_HEADER_MAP){
+    if(STOCK_HEADER_MAP[key].includes(n)) return key;
+  }
+  return null;
+}
+function parseNumberLoose(v){
+  if(v==null || v==='') return 0;
+  if(typeof v==='number') return v;
+  const cleaned = String(v).replace(/[^0-9.-]/g,'');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+function locationMatchesScope(lokasiStr, isPusat, branchId){
+  if(!lokasiStr) return true; // no location info in file -> don't filter it out
+  const l = String(lokasiStr).toLowerCase().trim();
+  if(isPusat) return l.includes('pusat');
+  const bName = branchName(branchId).toLowerCase();
+  return l.includes(bName) || bName.includes(l);
+}
+function parseStockWorkbook(arrayBuffer, isPusat, branchId){
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(sheet, {defval:''});
+  const rows = [];
+  let skipped = 0;
+  raw.forEach(r=>{
+    const norm = {};
+    Object.keys(r).forEach(h=>{
+      const key = mapStockHeader(h);
+      if(key) norm[key] = r[h];
+    });
+    const nama = String(norm.nama||'').trim();
+    const kode = String(norm.kode||'').trim();
+    if(!nama && !kode){ skipped++; return; }
+    if(!locationMatchesScope(norm.lokasi, isPusat, branchId)){ skipped++; return; }
+    rows.push({
+      kode: kode || ('SP-'+Math.floor(Math.random()*9000+1000)),
+      nama: nama || kode,
+      model: String(norm.model||'').trim(),
+      kelas: String(norm.kelas||'').trim(),
+      status: String(norm.status||'').trim(),
+      harga: parseNumberLoose(norm.harga),
+      qty: parseNumberLoose(norm.qty),
+    });
+  });
+  return { rows, skipped };
+}
+
+// Parses a bulk transaction file for the Transaksi Sparepart modal: kode, nama, qty, harga,
+// and an optional "Lokasi tujuan"/"Cabang Asal" column that can override the branch per row.
+function parseTransferWorkbook(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(sheet, {defval:''});
+  const rows = [];
+  let skipped = 0;
+  raw.forEach(r=>{
+    const norm = {};
+    Object.keys(r).forEach(h=>{
+      const key = mapStockHeader(h);
+      if(key) norm[key] = r[h];
+    });
+    const nama = String(norm.nama||'').trim();
+    const kode = String(norm.kode||'').trim();
+    if(!nama && !kode){ skipped++; return; }
+    rows.push({
+      kode: kode || ('SP-'+Math.floor(Math.random()*9000+1000)),
+      nama: nama || kode,
+      qty: parseNumberLoose(norm.qty) || 1,
+      harga: parseNumberLoose(norm.harga),
+      cabangRaw: String(norm.lokasi||'').trim(),
+    });
+  });
+  return { rows, skipped };
+}
+
+function resolveBranchId(text){
+  if(!text) return null;
+  const t = text.toLowerCase().trim();
+  let found = state.branches.find(b=>b.nama.toLowerCase()===t);
+  if(!found) found = state.branches.find(b=>b.nama.toLowerCase().includes(t) || t.includes(b.nama.toLowerCase()));
+  return found ? found.id : null;
+}
+
+function customerToRow(c){
+  return {
+    "No Tiket": c.ticket, "Lokasi": c.lokasiTipe==='pusat'?'Pusat':(c.lokasiTipe==='cabang'?branchName(c.lokasiId):pickupName(c.lokasiId)),
+    "Nama Customer": c.namaCustomer, "HP/WA 1": c.hp1, "HP/WA 2": c.hp2, "Alamat": c.alamat,
+    "Provinsi": c.provinsi, "Kota": c.kota, "Tgl Diterima": c.tglTerima, "Tgl Selesai": c.tglSelesai,
+    "Kategori": c.kategori, "Model": c.model, "Serial No": c.serialNo, "Aksesoris": c.aksesoris,
+    "Status Garansi": c.statusGaransi, "Warranty Period": c.warrantyPeriod, "Keluhan": c.keluhan,
+    "Analisa Teknisi": c.analisaTeknisi, "Symptom": c.symptom, "Leadtime": c.leadtime, "Catatan": c.catatan,
+    "Asal Produk": c.asalProduk, "Remarks": c.remarks, "Repair Status": c.repairStatus,
+    "Sparepart 1": c.sp1Nama, "Qty 1": c.sp1Qty, "Kode 1": c.sp1Kode, "Harga 1": c.sp1Harga,
+    "Sparepart 2": c.sp2Nama, "Qty 2": c.sp2Qty, "Kode 2": c.sp2Kode, "Harga 2": c.sp2Harga,
+    "Sparepart 3": c.sp3Nama, "Qty 3": c.sp3Qty, "Kode 3": c.sp3Kode, "Harga 3": c.sp3Harga,
+    "Notif WA": c.notifWa?'Ya':'Tidak', "Notif Email": c.notifEmail?'Ya':'Tidak'
+  };
+}
+
+/* ---------------- PDF export (simulated docs) ---------------- */
+function downloadOfferPdf(c){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(14); doc.setTextColor(15,79,176);
+  doc.text("OMRON HEALTHCARE — PENAWARAN HARGA SERVICE", 14, 18);
+  doc.setFontSize(10); doc.setTextColor(20,20,20);
+  doc.text(`No. Tiket: ${c.ticket}`, 14, 28);
+  doc.text(`Tanggal: ${fmtDate(new Date().toISOString())}`, 14, 34);
+  doc.text(`Nama Customer: ${c.namaCustomer||'-'}`, 14, 44);
+  doc.text(`Produk: ${c.kategori||'-'} — ${c.model||'-'}`, 14, 50);
+  doc.text(`Serial No.: ${c.serialNo||'-'}`, 14, 56);
+  doc.text(`Keluhan: ${c.keluhan||'-'}`, 14, 62);
+  doc.text(`Analisa Teknisi: ${c.analisaTeknisi||'-'}`, 14, 68);
+  let y = 82;
+  doc.setFontSize(11); doc.text("Rincian Sparepart / Biaya:", 14, y); y+=8;
+  doc.setFontSize(10);
+  const items = sparepartLines(c);
+  let total = 0;
+  items.forEach(it=>{
+    doc.text(`${it.nama}  x${it.qty}`, 14, y);
+    doc.text(fmtMoney(it.harga*it.qty), 150, y);
+    total += it.harga*it.qty;
+    y+=7;
+  });
+  if(!items.length){ doc.text('- Belum ada rincian sparepart -', 14, y); y+=7; }
+  y+=4;
+  doc.setFontSize(11); doc.text(`Estimasi Total: ${fmtMoney(total)}`, 14, y);
+  y+=14;
+  doc.setFontSize(9); doc.setTextColor(120,120,120);
+  doc.text("Dokumen ini adalah penawaran, bukan tagihan resmi. Berlaku 7 hari sejak tanggal diterbitkan.", 14, y);
+  doc.save(`Penawaran-${c.ticket}.pdf`);
+}
+
+function downloadInvoicePdf(c, payment){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(14); doc.setTextColor(15,79,176);
+  doc.text("OMRON HEALTHCARE — INVOICE SERVICE", 14, 18);
+  doc.setFontSize(10); doc.setTextColor(20,20,20);
+  doc.text(`No. Tiket: ${c.ticket}`, 14, 28);
+  doc.text(`Tanggal: ${fmtDate(new Date().toISOString())}`, 14, 34);
+  doc.text(`Nama Customer: ${c.namaCustomer||'-'}`, 14, 44);
+  doc.text(`Produk: ${c.kategori||'-'} — ${c.model||'-'}`, 14, 50);
+  doc.text(`Serial No.: ${c.serialNo||'-'}`, 14, 56);
+  doc.text(`Status Garansi: ${c.statusGaransi||'-'}`, 14, 62);
+  let y = 76;
+  doc.setFontSize(11); doc.text("Rincian Sparepart / Biaya:", 14, y); y+=8;
+  doc.setFontSize(10);
+  const items = sparepartLines(c);
+  let total = 0;
+  items.forEach(it=>{
+    doc.text(`${it.nama}  x${it.qty}`, 14, y);
+    doc.text(fmtMoney(it.harga*it.qty), 150, y);
+    total += it.harga*it.qty;
+    y+=7;
+  });
+  if(!items.length){ doc.text('- Tidak ada rincian sparepart -', 14, y); y+=7; }
+  y+=4;
+  const nominal = payment && payment.nominal ? Number(payment.nominal) : total;
+  doc.setFontSize(11); doc.text(`Total Tagihan: ${fmtMoney(nominal)}`, 14, y); y+=8;
+  if(payment && payment.bank){ doc.text(`Metode Pembayaran: ${payment.bank}`, 14, y); y+=7; }
+  if(payment && payment.vaCode){ doc.text(`Kode Bayar / VA: ${payment.vaCode}`, 14, y); y+=7; }
+  y+=8;
+  doc.setFontSize(9); doc.setTextColor(120,120,120);
+  doc.text("Invoice ini dihasilkan otomatis oleh sistem service Omron Healthcare.", 14, y);
+  doc.save(`Invoice-${c.ticket}.pdf`);
+}
+
+function sparepartLines(c){
+  const arr=[];
+  for(let i=1;i<=3;i++){
+    const nama=c['sp'+i+'Nama'];
+    if(nama){
+      arr.push({ nama, qty:Number(c['sp'+i+'Qty']||1), kode:c['sp'+i+'Kode']||'', harga:Number(c['sp'+i+'Harga']||0) });
+    }
+  }
+  return arr;
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    ${renderSidebar()}
+    <div class="main">
+      ${renderTopbar()}
+      <div class="content">${renderContent()}</div>
+    </div>
+    ${ui.modal ? renderModal() : ''}
+  `;
+  bindEvents();
+}
+
+function navAllowed(tab){
+  if(ui.role==='cabang') return tab==='data-customer';
+  if(ui.role==='pickup') return tab==='data-customer';
+  if(ui.role==='resepsionis') return tab==='data-customer';
+  return true; // pusat/admin sees everything
+}
+
+const SETTING_SUBS = [
+  {id:'provinces', label:'Data Provinsi'},
+  {id:'cities', label:'Data Kota/Kabupaten'},
+  {id:'categories', label:'Data Produk Kategori'},
+  {id:'models', label:'Data Model Alat'},
+  {id:'warrantyPeriod', label:'Data Warranty Period'},
+  {id:'asalProduk', label:'Data Asal Produk'},
+];
+
+function renderSidebar(){
+  const items = [
+    {id:'dashboard', icon:'⌂', label:'Dashboard'},
+    {id:'data-customer', icon:'🗂', label:'Data Customer'},
+    {id:'status-pembayaran', icon:'💳', label:'Status Pembayaran'},
+    {id:'cabang', icon:'🏢', label:'Cabang Service Center'},
+    {id:'pickup', icon:'📦', label:'Pickup Center'},
+    {id:'sparepart', icon:'🔧', label:'Sparepart Stok'},
+    {id:'setting', icon:'⚙', label:'Setting'},
+  ];
+  let html = `<div class="sidebar">
+    <div class="brand">
+      <div class="logo">OMRON<span>•</span>SERVICE</div>
+      <div class="sub">Healthcare Service Management</div>
+    </div>`;
+
+  items.forEach(it=>{
+    if(!navAllowed(it.id)) return;
+    const active = ui.tab===it.id;
+    html += `<div class="nav-item ${active?'active':''}" data-nav="${it.id}"><span class="nav-icon">${it.icon}</span>${it.label}</div>`;
+    if(it.id==='data-customer' && active){
+      const subs = navAllowed2ForRole();
+      html += `<div class="subnav">` + subs.map(s=>`<div class="nav-item ${ui.subtab===s.id?'active':''}" data-navsub="${s.id}">${s.label}</div>`).join('') + `</div>`;
+    }
+    if(it.id==='sparepart' && active){
+      const subs = ui.role==='pusat' ? [{id:'pusat',label:'Stok di Pusat'},{id:'cabang',label:'Stok di Cabang'}] : [{id:'cabang',label:'Stok di Cabang'}];
+      html += `<div class="subnav">` + subs.map(s=>`<div class="nav-item ${ui.subtab===s.id?'active':''}" data-navsub2="${s.id}">${s.label}</div>`).join('') + `</div>`;
+    }
+    if(it.id==='setting' && active){
+      html += `<div class="subnav">` + SETTING_SUBS.map(s=>`<div class="nav-item ${ui.subtab===s.id?'active':''}" data-navsub="${s.id}">${s.label}</div>`).join('') + `</div>`;
+    }
+  });
+
+  html += `<div class="sidebar-foot">Data tersimpan bersama (shared) untuk semua pengguna sistem ini.<br>Prototype v1.0</div></div>`;
+  return html;
+}
+
+function navAllowed2ForRole(){
+  if(ui.role==='cabang') return [{id:'cabang', label:'Cabang Saya'}];
+  if(ui.role==='pickup') return [{id:'pickup', label:'Input via Pickup'}];
+  if(ui.role==='resepsionis') return [{id:'pusat', label:'Input Resepsionis'}];
+  return [{id:'pusat',label:'Service Center Pusat'},{id:'cabang',label:'Service Center Cabang'},{id:'pickup',label:'Pickup Center'}];
+}
+
+function renderTopbar(){
+  const titles = {
+    'dashboard':'Dashboard', 'data-customer':'Data Customer', 'status-pembayaran':'Status Pembayaran',
+    'cabang':'Cabang Service Center', 'pickup':'Pickup Center', 'sparepart':'Sparepart Stok', 'setting':'Setting'
+  };
+  const roleLabel = {
+    pusat:'Admin Pusat', cabang:'Team Cabang', pickup:'Team Pickup Center', resepsionis:'Resepsionis Pusat'
+  };
+  let roleOptions = `
+    <option value="pusat" ${ui.role==='pusat'?'selected':''}>Admin Pusat (akses penuh)</option>
+    <option value="resepsionis" ${ui.role==='resepsionis'?'selected':''}>Resepsionis Pusat (input QR)</option>
+    <option value="cabang" ${ui.role==='cabang'?'selected':''}>Team Service Center Cabang</option>
+    <option value="pickup" ${ui.role==='pickup'?'selected':''}>Team Pickup Center</option>`;
+
+  let refSelector = '';
+  if(ui.role==='cabang'){
+    refSelector = `<select id="roleRefSel">` + state.branches.map(b=>`<option value="${b.id}" ${ui.roleRef===b.id?'selected':''}>${esc(b.nama)}</option>`).join('') + (state.branches.length?'':'<option value="">(belum ada cabang)</option>') + `</select>`;
+  } else if(ui.role==='pickup'){
+    refSelector = `<select id="roleRefSel">` + state.pickups.map(p=>`<option value="${p.id}" ${ui.roleRef===p.id?'selected':''}>${esc(p.nama)}</option>`).join('') + (state.pickups.length?'':'<option value="">(belum ada pickup center)</option>') + `</select>`;
+  }
+
+  return `<div class="topbar">
+    <div>
+      <h1>${titles[ui.tab]||''}</h1>
+      <div class="crumbs">Login sebagai: ${roleLabel[ui.role]}${ui.role==='cabang'&&ui.roleRef?' · '+esc(branchName(ui.roleRef)):''}${ui.role==='pickup'&&ui.roleRef?' · '+esc(pickupName(ui.roleRef)):''}</div>
+    </div>
+    <div class="role-box">
+      <span>👤</span>
+      <select id="roleSel">${roleOptions}</select>
+      ${refSelector}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+      <span style="font-size:11.5px;color:var(--ink-soft);">${esc((auth.currentUser&&auth.currentUser.email)||'')}</span>
+      <button class="logout-btn" id="logoutBtn">Keluar</button>
+    </div>
+  </div>`;
+}
+
+function renderContent(){
+  if(ui.tab==='dashboard') return renderDashboard();
+  if(ui.tab==='data-customer') return renderDataCustomer();
+  if(ui.tab==='status-pembayaran') return renderPembayaran();
+  if(ui.tab==='cabang') return renderCabangTab();
+  if(ui.tab==='pickup') return renderPickupTab();
+  if(ui.tab==='sparepart') return renderSparepartTab();
+  if(ui.tab==='setting') return renderSettingTab();
+  return '';
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function renderDashboard(){
+  const all = state.customers;
+  const total = all.length;
+  const inProgress = all.filter(c=>['Diterima SC','Diterima PC','Dalam Perbaikan','Menunggu Sparepart'].includes(c.repairStatus)).length;
+  const done = all.filter(c=>['Selesai','Dikirim','Diambil Customer','Diterima Customer'].includes(c.repairStatus)).length;
+  const oow = all.filter(c=>c.statusGaransi==='Out of Warranty').length;
+
+  return `
+  <div class="toolbar">
+    <div><h2 style="margin-bottom:2px">Ringkasan</h2><div class="desc">Statistik seluruh tiket service.</div></div>
+    ${ui.role==='pusat' ? `<button class="btn btn-outline" data-action="migrate-tickets">🔁 Migrasi Nomor Tiket ke Format Baru</button>` : ''}
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="num">${total}</div><div class="lbl">Total Tiket Service</div></div>
+    <div class="kpi"><div class="num">${inProgress}</div><div class="lbl">Sedang Diproses</div></div>
+    <div class="kpi"><div class="num">${done}</div><div class="lbl">Selesai / Terkirim</div></div>
+    <div class="kpi"><div class="num">${oow}</div><div class="lbl">Out of Warranty</div></div>
+    <div class="kpi"><div class="num">${state.branches.length}</div><div class="lbl">Cabang Service Center</div></div>
+    <div class="kpi"><div class="num">${state.pickups.length}</div><div class="lbl">Pickup Center</div></div>
+  </div>
+  <div class="card">
+    <h2>Tiket Terbaru</h2>
+    <div class="desc">10 tiket terakhir masuk dari seluruh lokasi.</div>
+    ${renderCustomerTable(all.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,10), false)}
+  </div>`;
+}
+
+/* ---------------- DATA CUSTOMER ---------------- */
+function renderDataCustomer(){
+  if(!ui.subtab) ui.subtab = navAllowed2ForRole()[0].id;
+  const tipe = ui.subtab; // pusat | cabang | pickup
+
+  if(ui.page && ui.page.type==='customer-form') return renderCustomerFormPage(ui.page);
+
+  if(ui.role==='resepsionis'){
+    return renderPublicIntakeForm('pusat', null);
+  }
+  if(ui.role==='pickup'){
+    if(!ui.roleRef) return `<div class="banner">Pilih Pickup Center Anda di pojok kanan atas terlebih dahulu.</div>`;
+    return renderPickupIntakeView();
+  }
+
+  const list = visibleCustomers(tipe);
+  const scopeLabel = tipe==='pusat'?'Service Center Pusat':(tipe==='cabang'?'Service Center Cabang':'Pickup Center');
+
+  let branchFilterBar = '';
+  if(tipe==='cabang' && ui.role==='pusat'){
+    branchFilterBar = `<select id="branchFilter" class="search-box">
+      <option value="">Semua Cabang</option>
+      ${state.branches.map(b=>`<option value="${b.id}" ${ui.branchFilter===b.id?'selected':''}>${esc(b.nama)}</option>`).join('')}
+    </select>`;
+  }
+  if(tipe==='pickup' && ui.role==='pusat'){
+    branchFilterBar = `<select id="pickupFilter" class="search-box">
+      <option value="">Semua Pickup Center</option>
+      ${state.pickups.map(p=>`<option value="${p.id}" ${ui.pickupFilter===p.id?'selected':''}>${esc(p.nama)}</option>`).join('')}
+    </select>`;
+  }
+
+  let filtered = list;
+  if(tipe==='cabang' && ui.branchFilter) filtered = filtered.filter(c=>c.lokasiId===ui.branchFilter);
+  if(tipe==='pickup' && ui.pickupFilter) filtered = filtered.filter(c=>c.lokasiId===ui.pickupFilter);
+
+  return `
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h2 style="margin-bottom:2px">Data Customer — ${scopeLabel}</h2>
+        <div class="desc">${filtered.length} tiket ditemukan${ui.role==='cabang'?' · hanya menampilkan cabang Anda':''}</div>
+      </div>
+      <div class="row">
+        <input class="search-box" id="searchBox" placeholder="Cari no. tiket / nama / serial…" value="${esc(ui.search)}">
+        ${branchFilterBar}
+        <button class="btn btn-outline" data-action="export-customer" data-tipe="${tipe}">⬇ Download Excel</button>
+        <button class="btn btn-primary" data-action="new-customer" data-tipe="${tipe}">+ Tambah Tiket</button>
+      </div>
+    </div>
+    ${renderCustomerTable(filtered, true)}
+  </div>`;
+}
+
+function renderCustomerTable(list, withActions){
+  if(!list.length) return `<div class="empty">Belum ada data. Klik "+ Tambah Tiket" untuk membuat data pertama.</div>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>No. Tiket</th><th>Lokasi</th><th>Nama Customer</th><th>Produk</th><th>Serial</th>
+      <th>Garansi</th><th>Status Perbaikan</th><th>Tgl Diterima</th>${withActions?'<th>Aksi</th>':''}
+    </tr></thead>
+    <tbody>
+    ${list.map(c=>`
+      <tr>
+        <td><b>${esc(c.ticket)}</b></td>
+        <td>${c.lokasiTipe==='pusat'?'Pusat':(c.lokasiTipe==='cabang'?esc(branchName(c.lokasiId)):esc(pickupName(c.lokasiId)))}</td>
+        <td>${esc(c.namaCustomer)||'-'}</td>
+        <td>${esc(c.kategori)||'-'}<div class="tag">${esc(c.model)||''}</div></td>
+        <td>${esc(c.serialNo)||'-'}</td>
+        <td><span class="badge ${c.statusGaransi==='Out of Warranty'?'badge-orange':'badge-green'}">${esc(c.statusGaransi)||'-'}</span></td>
+        <td><span class="badge ${statusBadgeClass(c.repairStatus)}">${esc(c.repairStatus)||'-'}</span></td>
+        <td>${fmtDate(c.tglTerima)}</td>
+        ${withActions?`<td><span class="link-cell" data-action="view-customer" data-id="${c.id}">Lihat / Edit</span></td>`:''}
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+/* Public intake form used by resepsionis pusat / QR link */
+function renderPublicIntakeForm(tipe, lokasiId){
+  return `
+  <div class="card">
+    <h2>Form Input Data Customer</h2>
+    <div class="desc">Form ini digunakan resepsionis / QR code untuk mendaftarkan alat customer yang masuk ke Service Center Pusat. Nomor tiket dibuat otomatis setelah disimpan.</div>
+    <div id="intakeFormHost"></div>
+  </div>`;
+}
+
+function renderPickupIntakeView(){
+  const list = visibleCustomers('pickup');
+  return `
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h2 style="margin-bottom:2px">Input Data Customer — ${esc(pickupName(ui.roleRef))}</h2>
+        <div class="desc">Data yang Anda input akan masuk ke Data Customer Pickup Center, lalu diteruskan sebagai permintaan pickup oleh kurir.</div>
+      </div>
+      <button class="btn btn-primary" data-action="new-customer" data-tipe="pickup">+ Tambah Data Customer</button>
+    </div>
+    ${renderCustomerTable(list, true)}
+  </div>`;
+}
+
+/* ---------------- FORM MODAL BUILDER ---------------- */
+function buildCustomerFormHtml(data, tipe){
+  data = data || {};
+  let html = '';
+  CUSTOMER_SECTIONS.forEach(sec=>{
+    html += `<div class="section-title">${sec.title}</div><div class="grid">`;
+    sec.fields.forEach(f=>{
+      html += `<div class="field">${fieldHtml(f, data)}</div>`;
+    });
+    html += `</div>`;
+  });
+
+  // Sparepart section
+  html += `<div class="section-title">Sparepart Digunakan</div>
+    <div class="helper" style="margin-top:-6px;margin-bottom:10px">Mengisi kode/nama & jumlah di sini akan otomatis mengurangi stok sparepart di lokasi tiket ini (Pusat atau Cabang terkait). Mengubah/menghapus tiket akan menyesuaikan stok kembali.</div>`;
+  for(let i=1;i<=3;i++){
+    html += `<div class="sparepart-row">
+      <div><label>Nama Sparepart ${i}</label><input type="text" data-field="sp${i}Nama" value="${esc(data['sp'+i+'Nama']||'')}"></div>
+      <div><label>Jumlah</label><input type="number" min="0" data-field="sp${i}Qty" value="${esc(data['sp'+i+'Qty']||'')}"></div>
+      <div><label>Kode Sparepart</label><input type="text" data-field="sp${i}Kode" value="${esc(data['sp'+i+'Kode']||'')}"></div>
+      <div><label>Harga (Rp)</label><input type="number" min="0" data-field="sp${i}Harga" value="${esc(data['sp'+i+'Harga']||'')}"></div>
+    </div>`;
+  }
+
+  html += `<div class="section-title">Notifikasi Service Report</div>
+    <label class="checkbox-row"><input type="checkbox" data-field="notifWa" ${data.notifWa?'checked':''}> Kirim via WhatsApp</label>
+    <label class="checkbox-row"><input type="checkbox" data-field="notifEmail" ${data.notifEmail?'checked':''}> Kirim via Email</label>`;
+
+  return html;
+}
+
+function fieldHtml(f, data){
+  const val = data[f.key]||'';
+  if(f.type==='text') return `<label>${f.label}${f.required?' *':''}</label><input type="text" data-field="${f.key}" value="${esc(val)}">`;
+  if(f.type==='textarea') return `<label>${f.label}</label><textarea data-field="${f.key}">${esc(val)}</textarea>`;
+  if(f.type==='date') return `<label>${f.label}</label><input type="date" data-field="${f.key}" value="${esc(val)}">`;
+  if(f.type==='select') return `<label>${f.label}</label><select data-field="${f.key}"><option value="">— pilih —</option>${f.options.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  if(f.type==='select-province') return `<label>${f.label}</label><select data-field="provinsi" id="provinsiSel"><option value="">— pilih provinsi —</option>${getProvinceList().map(p=>`<option value="${esc(p)}" ${val===p?'selected':''}>${esc(p)}</option>`).join('')}</select>`;
+  if(f.type==='select-city'){
+    const prov = data.provinsi;
+    const cities = getCitiesForProvince(prov);
+    return `<label>${f.label}</label><select data-field="kota" id="kotaSel">${cities.length?'<option value="">— pilih kota —</option>':'<option value="">(pilih provinsi dulu)</option>'}${cities.map(c=>`<option value="${esc(c)}" ${val===c?'selected':''}>${esc(c)}</option>`).join('')}</select>`;
+  }
+  if(f.type==='select-category') return `<label>${f.label}</label><select data-field="kategori" id="kategoriSel"><option value="">— pilih kategori —</option>${getCategoryList().map(k=>`<option value="${esc(k)}" ${val===k?'selected':''}>${esc(k)}</option>`).join('')}</select>`;
+  if(f.type==='select-model'){
+    const kat = data.kategori;
+    const models = getModelsForCategory(kat);
+    return `<label>${f.label}</label><select data-field="model" id="modelSel"><option value="">${models.length?'— pilih model —':'(pilih kategori dulu)'}</option>${models.map(m=>`<option value="${esc(m)}" ${val===m?'selected':''}>${esc(m)}</option>`).join('')}</select><div class="helper">Model tidak ada di daftar? Ketik manual dengan memilih model lalu ubah di kolom Serial/Catatan.</div>`;
+  }
+  if(f.type==='select-warranty') return `<label>${f.label}</label><select data-field="warrantyPeriod"><option value="">— pilih —</option>${getWarrantyPeriods().map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  if(f.type==='select-asal') return `<label>${f.label}</label><select data-field="asalProduk"><option value="">— pilih —</option>${getAsalProdukList().map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  return '';
+}
+
+function openCustomerForm(tipe, existingId){
+  const existing = existingId ? state.customers.find(c=>c.id===existingId) : null;
+  ui.page = { type:'customer-form', tipe, id: existingId||null, draft: existing ? {...existing} : { lokasiTipe: tipe, lokasiId: defaultLokasiId(tipe) } };
+  render();
+}
+
+function defaultLokasiId(tipe){
+  if(tipe==='cabang') return ui.role==='cabang' ? ui.roleRef : (state.branches[0]?state.branches[0].id:null);
+  if(tipe==='pickup') return ui.role==='pickup' ? ui.roleRef : (state.pickups[0]?state.pickups[0].id:null);
+  return null;
+}
+
+function renderModal(){
+  const m = ui.modal;
+  if(m.type==='branch') return renderBranchModal(m);
+  if(m.type==='pickupCenter') return renderPickupModal(m);
+  if(m.type==='payment') return renderPaymentModal(m);
+  if(m.type==='stockTx') return renderStockTxModal(m);
+  if(m.type==='opname') return renderOpnameModal(m);
+  if(m.type==='uploadStock') return renderUploadStockModal(m);
+  if(m.type==='refUpload') return renderRefUploadModal(m);
+  return '';
+}
+
+function renderCustomerFormPage(m){
+  const d = m.draft;
+  const isEdit = !!m.id;
+  let lokasiPicker = '';
+  if(m.tipe==='cabang' && ui.role!=='cabang'){
+    lokasiPicker = `<div class="field"><label>Cabang</label><select data-field="lokasiId">${state.branches.map(b=>`<option value="${b.id}" ${d.lokasiId===b.id?'selected':''}>${esc(b.nama)}</option>`).join('')}</select></div>`;
+  }
+  if(m.tipe==='pickup' && ui.role!=='pickup'){
+    lokasiPicker = `<div class="field"><label>Pickup Center</label><select data-field="lokasiId">${state.pickups.map(p=>`<option value="${p.id}" ${d.lokasiId===p.id?'selected':''}>${esc(p.nama)}</option>`).join('')}</select></div>`;
+  }
+  return `<div class="card">
+      <div class="toolbar">
+        <div>
+          <h2 style="margin-bottom:2px">${isEdit? 'Detail Tiket: '+esc(d.ticket) : 'Tambah Tiket Service Baru'}</h2>
+          <div class="desc">${isEdit?'Ubah data lalu simpan. No. tiket bersifat tetap.':'No. tiket akan dibuat otomatis setelah disimpan.'}</div>
+        </div>
+        <button class="btn btn-outline" data-action="close-form">&larr; Kembali ke Daftar</button>
+      </div>
+      ${lokasiPicker}
+      <div id="customerFormBody">${buildCustomerFormHtml(d, m.tipe)}</div>
+      <div class="footer-actions">
+        ${isEdit?`<button class="btn btn-danger" data-action="delete-customer" data-id="${m.id}">Hapus</button>`:''}
+        <button class="btn btn-outline" data-action="close-form">Batal</button>
+        <button class="btn btn-primary" data-action="save-customer">${isEdit?'Simpan Perubahan':'Simpan & Buat Tiket'}</button>
+      </div>
+    </div>`;
+}
+
+/* ---------------- STATUS PEMBAYARAN ---------------- */
+function renderPembayaran(){
+  if(ui.role!=='pusat') return `<div class="banner">Tab ini hanya dapat diakses oleh Admin Pusat.</div>`;
+  const oow = state.customers.filter(c=>c.statusGaransi==='Out of Warranty');
+  return `
+  <div class="card">
+    <div class="toolbar">
+      <div><h2 style="margin-bottom:2px">Status Pembayaran — Out of Warranty</h2>
+      <div class="desc">${oow.length} tiket dengan status Out of Warranty. Generate kode bayar dan dokumen dari sini.</div></div>
+    </div>
+    <div class="banner blue">Kode bayar (Virtual Account / Alfamart / Indomaret) di bawah ini <b>simulasi tampilan</b>. Untuk kode bayar nyata perlu integrasi payment gateway (mis. Midtrans/Xendit) dengan akun merchant aktif.</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>No. Tiket</th><th>Customer</th><th>Produk</th><th>Nominal</th><th>Bank/Channel</th><th>Kode Bayar</th><th>Status</th><th>Aksi</th></tr></thead>
+      <tbody>
+      ${oow.map(c=>{
+        const p = state.payments[c.ticket];
+        return `<tr>
+          <td><b>${esc(c.ticket)}</b></td>
+          <td>${esc(c.namaCustomer)||'-'}</td>
+          <td>${esc(c.kategori)||'-'} <div class="tag">${esc(c.model)||''}</div></td>
+          <td>${p? fmtMoney(p.nominal) : '-'}</td>
+          <td>${p? esc(p.bank) : '-'}</td>
+          <td>${p? '<b>'+esc(p.vaCode)+'</b>' : '-'}</td>
+          <td>${p? (p.paid? '<span class="badge badge-green">Lunas</span>' : '<span class="badge badge-orange">Menunggu Bayar</span>') : '<span class="badge badge-gray">Belum digenerate</span>'}</td>
+          <td class="row" style="gap:6px">
+            <button class="btn btn-sm btn-outline" data-action="open-payment" data-id="${c.id}">${p?'Ubah':'Generate'}</button>
+            <button class="btn btn-sm btn-outline" data-action="dl-offer" data-id="${c.id}">Penawaran</button>
+            <button class="btn btn-sm btn-outline" data-action="dl-invoice" data-id="${c.id}" ${!p?'disabled':''}>Invoice</button>
+            ${p && !p.paid ? `<button class="btn btn-sm btn-green" data-action="mark-paid" data-ticket="${esc(c.ticket)}">Tandai Lunas</button>`:''}
+          </td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>
+    ${!oow.length?'<div class="empty">Belum ada tiket dengan status Out of Warranty.</div>':''}
+  </div>`;
+}
+
+function renderPaymentModal(m){
+  const c = state.customers.find(x=>x.id===m.id);
+  const p = state.payments[c.ticket] || {};
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Generate Kode Bayar</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="desc">Tiket <b>${esc(c.ticket)}</b> — ${esc(c.namaCustomer)||'-'}</div>
+      <div class="field"><label>Nominal Tagihan (Rp)</label><input type="number" id="payNominal" value="${p.nominal||''}"></div>
+      <div class="field"><label>Channel Pembayaran</label><select id="payBank">${BANKS.map(b=>`<option value="${b}" ${p.bank===b?'selected':''}>${b}</option>`).join('')}</select></div>
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="confirm-payment" data-id="${c.id}">Generate Kode Bayar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------------- CABANG TAB ---------------- */
+function renderCabangTab(){
+  if(ui.role!=='pusat') return `<div class="banner">Tab ini hanya dapat dikelola oleh Admin Pusat.</div>`;
+  return `
+  <div class="card">
+    <div class="toolbar">
+      <div><h2 style="margin-bottom:2px">Cabang Service Center (OEC)</h2><div class="desc">${state.branches.length} cabang terdaftar.</div></div>
+      <button class="btn btn-primary" data-action="new-branch">+ Tambah Cabang</button>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nama OEC</th><th>Partner By</th><th>Kota</th><th>Jumlah Tiket</th><th>Aksi</th></tr></thead>
+      <tbody>
+      ${state.branches.map(b=>{
+        const cnt = state.customers.filter(c=>c.lokasiTipe==='cabang'&&c.lokasiId===b.id).length;
+        return `<tr><td><b>${esc(b.nama)}</b></td><td>${esc(b.partner)}</td><td>${esc(b.kota)}</td><td>${cnt}</td>
+        <td><button class="btn btn-sm btn-danger" data-action="delete-branch" data-id="${b.id}">Hapus</button></td></tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>
+    ${!state.branches.length?'<div class="empty">Belum ada cabang. Klik "+ Tambah Cabang" untuk menambahkan.</div>':''}
+  </div>`;
+}
+
+function renderBranchModal(m){
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Tambah Cabang Service Center</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="field"><label>Nama OEC</label><input type="text" id="bNama" placeholder="Contoh: OEC Bandung"></div>
+      <div class="field"><label>Partner By</label><select id="bPartner"><option>Mitracare</option><option>Datascrip SC</option></select></div>
+      <div class="field"><label>Kota OEC</label><input type="text" id="bKota" placeholder="Contoh: Bandung"></div>
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="save-branch">Simpan</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------------- PICKUP TAB ---------------- */
+function renderPickupTab(){
+  if(ui.role!=='pusat') return `<div class="banner">Tab ini hanya dapat dikelola oleh Admin Pusat.</div>`;
+  return `
+  <div class="card">
+    <div class="toolbar">
+      <div><h2 style="margin-bottom:2px">Pickup Center (OPC)</h2><div class="desc">${state.pickups.length} pickup center terdaftar.</div></div>
+      <button class="btn btn-primary" data-action="new-pickup">+ Tambah Pickup Center</button>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nama OPC</th><th>Partner By</th><th>Kota</th><th>Jumlah Tiket</th><th>Aksi</th></tr></thead>
+      <tbody>
+      ${state.pickups.map(p=>{
+        const cnt = state.customers.filter(c=>c.lokasiTipe==='pickup'&&c.lokasiId===p.id).length;
+        return `<tr><td><b>${esc(p.nama)}</b></td><td>${esc(p.partner)}</td><td>${esc(p.kota)}</td><td>${cnt}</td>
+        <td><button class="btn btn-sm btn-danger" data-action="delete-pickup" data-id="${p.id}">Hapus</button></td></tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>
+    ${!state.pickups.length?'<div class="empty">Belum ada pickup center. Klik "+ Tambah Pickup Center" untuk menambahkan.</div>':''}
+  </div>`;
+}
+
+function renderPickupModal(m){
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Tambah Pickup Center</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="field"><label>Nama OPC</label><input type="text" id="pNama" placeholder="Contoh: OPC Alpro Kelapa Gading"></div>
+      <div class="field"><label>Partner By</label><select id="pPartner"><option>Alpro</option></select></div>
+      <div class="field"><label>Kota OPC</label><input type="text" id="pKota" placeholder="Contoh: Jakarta Utara"></div>
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="save-pickup">Simpan</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------------- SPAREPART STOK ---------------- */
+function renderSparepartTab(){
+  if(!ui.subtab || (ui.role!=='pusat' && ui.subtab==='pusat')) ui.subtab = ui.role==='pusat' ? 'pusat' : 'cabang';
+
+  if(ui.subtab==='pusat'){
+    if(ui.role!=='pusat') return `<div class="banner">Hanya Admin Pusat yang dapat mengakses stok pusat.</div>`;
+    return renderStockPanel('pusat', null, state.sparepartPusat);
+  } else {
+    if(ui.role==='pusat'){
+      const branchSel = `<select id="stockBranchSel" class="search-box">${state.branches.map(b=>`<option value="${b.id}" ${ui.stockBranch===b.id?'selected':''}>${esc(b.nama)}</option>`).join('')}</select>`;
+      if(!state.branches.length) return `<div class="banner">Belum ada cabang terdaftar. Tambahkan cabang terlebih dahulu di tab "Cabang Service Center".</div>`;
+      const bId = ui.stockBranch || state.branches[0].id;
+      ui.stockBranch = bId;
+      return `<div class="row" style="margin-bottom:14px">${branchSel}</div>` + renderStockPanel('cabang', bId, branchStockStore(bId));
+    } else if(ui.role==='cabang'){
+      if(!ui.roleRef) return `<div class="banner">Pilih cabang Anda di pojok kanan atas.</div>`;
+      return renderStockPanel('cabang', ui.roleRef, branchStockStore(ui.roleRef));
+    }
+    return `<div class="banner">Role ini tidak memiliki akses ke stok sparepart.</div>`;
+  }
+}
+
+function renderStockPanel(scope, branchId, store){
+  const isPusat = scope==='pusat';
+  const totalItems = store.stock.reduce((s,i)=>s+Number(i.qty||0),0);
+
+  const txTypesPusat = [
+    {v:'terima_gudang', l:'Terima dari Gudang (masuk)'},
+    {v:'kirim_cabang', l:'Kirim ke Cabang (keluar)'},
+    {v:'terima_cabang', l:'Terima dari Cabang (masuk)'},
+    {v:'terpakai_pusat', l:'Terpakai di Pusat (keluar)'},
+  ];
+  const txTypesCabang = [
+    {v:'terima_pusat', l:'Terima dari Pusat (masuk)'},
+    {v:'kirim_pusat', l:'Kirim Balik ke Pusat (keluar)'},
+    {v:'terpakai_cabang', l:'Terpakai di Cabang (keluar)'},
+  ];
+  const txTypes = isPusat ? txTypesPusat : txTypesCabang;
+  const scopeKey = isPusat ? 'pusat' : branchId;
+
+  return `
+  <div class="kpi-grid">
+    <div class="kpi"><div class="num">${store.stock.length}</div><div class="lbl">Jenis Sparepart</div></div>
+    <div class="kpi"><div class="num">${totalItems}</div><div class="lbl">Total Qty Stok</div></div>
+    <div class="kpi"><div class="num">${store.tx.length}</div><div class="lbl">Total Transaksi</div></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div><h2 style="margin-bottom:2px">Stok Sparepart ${isPusat?'di Pusat':'— '+esc(branchName(branchId))}</h2>
+      <div class="desc">Daftar jenis sparepart beserta jumlah stok saat ini.</div></div>
+      <div class="row">
+        <div class="pill-tabs" style="margin:0">
+          ${downloadDropdownButtons(isPusat, scopeKey, store)}
+        </div>
+        <button class="btn btn-outline" data-action="dl-stock-template">⬇ Template Excel</button>
+        <button class="btn btn-outline" data-action="open-upload-stock" data-scope="${scope}" data-branch="${branchId||''}">⬆ Upload Excel</button>
+        <button class="btn btn-primary" data-action="new-stocktx" data-scope="${scope}" data-branch="${branchId||''}">+ Transaksi Stok</button>
+        <button class="btn btn-outline" data-action="new-opname" data-scope="${scope}" data-branch="${branchId||''}">Stok Opname</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Kode</th><th>Nama Sparepart</th><th>Model</th><th>Qty Stok</th><th>Harga Satuan</th></tr></thead>
+      <tbody>
+      ${store.stock.map(s=>`<tr><td>${esc(s.kode)}</td><td>${esc(s.nama)}</td><td>${esc(s.model)||'-'}</td>
+        <td class="${s.qty<0?'stock-neg':(s.qty<=3?'stock-low':'')}">${s.qty}</td><td>${fmtMoney(s.harga)}</td></tr>`).join('')}
+      </tbody>
+    </table></div>
+    ${!store.stock.length?'<div class="empty">Belum ada data stok. Tambahkan lewat "+ Transaksi Stok" atau "⬆ Upload Excel".</div>':''}
+  </div>
+
+  <div class="card">
+    <h2>Riwayat Transaksi</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Tanggal</th><th>Jenis</th><th>Sparepart</th><th>Qty</th><th>Ref. Tiket</th><th>Catatan</th></tr></thead>
+      <tbody>
+      ${store.tx.slice().reverse().slice(0,50).map(t=>`<tr>
+        <td>${fmtDate(t.date)}</td><td><span class="badge badge-blue">${esc(txLabel(t.type))}</span></td>
+        <td>${esc(t.nama)} <span class="tag">(${esc(t.kode)})</span></td><td>${t.qty}</td>
+        <td>${esc(t.ticket)||'-'}</td><td>${esc(t.note)||'-'}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
+    ${!store.tx.length?'<div class="empty">Belum ada transaksi.</div>':''}
+  </div>`;
+}
+
+function txLabel(v){
+  const all = {terima_gudang:'Terima dari Gudang',kirim_cabang:'Kirim ke Cabang',terima_cabang:'Terima dari Cabang',
+    terpakai_pusat:'Terpakai di Pusat',terima_pusat:'Terima dari Pusat',kirim_pusat:'Kirim Balik ke Pusat',
+    terpakai_cabang:'Terpakai di Cabang', opname:'Stok Opname', import_set:'Import Excel (Set Stok)',
+    import_terima_gudang:'Import Excel (Terima dari Gudang)', import_terima_pusat:'Import Excel (Terima dari Pusat)',
+    pengembalian_pusat:'Pengembalian Sparepart (Pusat)', pengembalian_cabang:'Pengembalian Sparepart (Cabang)'};
+  return all[v]||v;
+}
+
+/* ---------------- SETTING TAB (editable master data) ---------------- */
+function renderSettingTab(){
+  if(ui.role!=='pusat') return `<div class="banner">Tab ini hanya dapat diakses oleh Admin Pusat.</div>`;
+  if(!ui.subtab) ui.subtab = SETTING_SUBS[0].id;
+  return renderRefDataPanel(ui.subtab);
+}
+
+function renderRefDataPanel(key){
+  const cfg = REF_CONFIGS[key];
+  if(!cfg) return `<div class="empty">Pilih salah satu data di menu Setting.</div>`;
+  const data = state.refData[key] || [];
+
+  const addRow = cfg.simple ? `
+    <div class="field" style="flex:1;margin-bottom:0"><label>${cfg.colLabel} Baru</label><input type="text" id="refNewSimple" placeholder="Tambah ${cfg.colLabel.toLowerCase()}…"></div>
+  ` : `
+    <div class="field" style="flex:1;margin-bottom:0"><label>${cfg.col1Label} Baru</label><input type="text" id="refNewField1"></div>
+    <div class="field" style="flex:1;margin-bottom:0"><label>${cfg.col2Label}</label><select id="refNewField2">${cfg.field2Options().length?cfg.field2Options().map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join(''):`<option value="">(belum ada data ${cfg.col2Label.toLowerCase()})</option>`}</select></div>
+  `;
+
+  return `<div class="card">
+    <div class="toolbar">
+      <div><h2 style="margin-bottom:2px">${cfg.title}</h2><div class="desc">${data.length} entri terdaftar. Digunakan sebagai pilihan dropdown pada form Data Customer.</div></div>
+      <div class="row">
+        <button class="btn btn-outline" data-action="dl-ref-template" data-key="${key}">⬇ Template Excel</button>
+        <button class="btn btn-outline" data-action="open-upload-ref" data-key="${key}">⬆ Upload Excel</button>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:16px;align-items:flex-end">
+      ${addRow}
+      <button class="btn btn-primary" data-action="add-ref-item" data-key="${key}">+ Tambah</button>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>${cfg.simple?`<th>${cfg.colLabel}</th>`:`<th>${cfg.col1Label}</th><th>${cfg.col2Label}</th>`}<th style="width:90px">Aksi</th></tr></thead>
+      <tbody>
+        ${data.map((item,idx)=>`<tr>
+          ${cfg.simple?`<td>${esc(item)}</td>`:`<td>${esc(item[cfg.field1])}</td><td>${esc(item[cfg.field2]||'-')}</td>`}
+          <td><button class="btn btn-sm btn-danger" data-action="delete-ref-item" data-key="${key}" data-idx="${idx}">Hapus</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+    ${!data.length?'<div class="empty">Belum ada data. Tambahkan manual di atas atau upload lewat Excel.</div>':''}
+  </div>`;
+}
+
+function refTemplateRows(key){
+  const samples = {
+    provinces: [{ "Provinsi":"DKI Jakarta" }],
+    categories: [{ "Kategori":"ARM" }],
+    warrantyPeriod: [{ "Warranty Period":"1" }],
+    asalProduk: [{ "Asal Produk":"LEU" }],
+    cities: [{ "Kota":"Jakarta Pusat", "Provinsi":"DKI Jakarta" }],
+    models: [{ "Model":"HEM-7120", "Kategori":"ARM" }],
+  };
+  return samples[key] || [];
+}
+
+function parseRefWorkbook(arrayBuffer, key){
+  const cfg = REF_CONFIGS[key];
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(sheet, {defval:''});
+  const rows = [];
+  let skipped = 0;
+  raw.forEach(r=>{
+    if(cfg.simple){
+      let val = null;
+      Object.keys(r).forEach(h=>{ if(val==null && cfg.aliases.includes(normHeader(h))) val = r[h]; });
+      const v = String(val==null?'':val).trim();
+      if(!v){ skipped++; return; }
+      rows.push(v);
+    } else {
+      let v1 = null, v2 = null;
+      Object.keys(r).forEach(h=>{
+        const n = normHeader(h);
+        if(v1==null && cfg.aliases1.includes(n)) v1 = r[h];
+        if(v2==null && cfg.aliases2.includes(n)) v2 = r[h];
+      });
+      const s1 = String(v1==null?'':v1).trim();
+      const s2 = String(v2==null?'':v2).trim();
+      if(!s1){ skipped++; return; }
+      rows.push({ [cfg.field1]: s1, [cfg.field2]: s2 });
+    }
+  });
+  return { rows, skipped };
+}
+
+function renderRefUploadModal(m){
+  const cfg = REF_CONFIGS[m.key];
+  const rows = m.rows;
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Upload ${cfg.title}</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="desc">Format kolom: ${cfg.simple?`<b>${cfg.excelCol}</b>`:`<b>${cfg.excelCol1}</b> dan <b>${cfg.excelCol2}</b>`}. Nama kolom cukup mirip, tidak harus persis sama.</div>
+      <div class="row" style="margin-bottom:10px"><button class="btn btn-outline btn-sm" data-action="dl-ref-template" data-key="${m.key}">⬇ Template Excel</button></div>
+      <div class="field"><label>Pilih File Excel (.xlsx / .xls)</label><input type="file" id="refUploadFile" accept=".xlsx,.xls"></div>
+      <div class="field"><label>Mode Import</label>
+        <select id="refUploadMode">
+          <option value="add" ${m.mode!=='replace'?'selected':''}>Tambahkan ke daftar yang ada (lewati duplikat)</option>
+          <option value="replace" ${m.mode==='replace'?'selected':''}>Ganti seluruh daftar dengan isi file ini</option>
+        </select>
+      </div>
+      ${rows ? `
+        <div class="banner blue">${rows.length} baris valid siap diproses.${m.skipped?` ${m.skipped} baris dilewati karena data tidak lengkap.`:''}</div>
+        <div class="table-wrap" style="max-height:240px;overflow-y:auto"><table>
+          <thead><tr>${cfg.simple?`<th>${cfg.colLabel}</th>`:`<th>${cfg.col1Label}</th><th>${cfg.col2Label}</th>`}</tr></thead>
+          <tbody>${rows.slice(0,50).map(r=>cfg.simple?`<tr><td>${esc(r)}</td></tr>`:`<tr><td>${esc(r[cfg.field1])}</td><td>${esc(r[cfg.field2]||'-')}</td></tr>`).join('')}</tbody>
+        </table></div>
+        ${rows.length>50?`<div class="helper">Menampilkan 50 dari ${rows.length} baris.</div>`:''}
+      ` : `<div class="empty">Pilih file untuk melihat pratinjau.</div>`}
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="confirm-upload-ref" data-key="${m.key}" ${!rows||!rows.length?'disabled':''}>Import ${rows?rows.length:0} Data</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function addRefItem(key){
+  const cfg = REF_CONFIGS[key];
+  if(!state.refData[key]) state.refData[key] = [];
+  if(cfg.simple){
+    const input = document.getElementById('refNewSimple');
+    const val = input.value.trim();
+    if(!val){ alert(`Isi ${cfg.colLabel.toLowerCase()} terlebih dahulu.`); return; }
+    if(state.refData[key].some(x=>x.toLowerCase()===val.toLowerCase())){ alert('Data sudah ada di daftar.'); return; }
+    state.refData[key].push(val);
+  } else {
+    const v1 = document.getElementById('refNewField1').value.trim();
+    const v2sel = document.getElementById('refNewField2');
+    const v2 = v2sel ? v2sel.value : '';
+    if(!v1){ alert(`Isi ${cfg.col1Label} terlebih dahulu.`); return; }
+    if(state.refData[key].some(x=>x[cfg.field1].toLowerCase()===v1.toLowerCase() && (x[cfg.field2]||'').toLowerCase()===(v2||'').toLowerCase())){ alert('Data sudah ada di daftar.'); return; }
+    state.refData[key].push({ [cfg.field1]: v1, [cfg.field2]: v2 });
+  }
+  saveState();
+  render();
+}
+
+function confirmUploadRef(key){
+  const m = ui.modal;
+  if(!m || !m.rows || !m.rows.length) return;
+  const cfg = REF_CONFIGS[key];
+  const modeSel = document.getElementById('refUploadMode');
+  const mode = modeSel ? modeSel.value : (m.mode||'add');
+  if(!state.refData[key]) state.refData[key] = [];
+  if(mode==='replace') state.refData[key] = [];
+
+  let added=0, skippedDup=0, autoParent=0;
+  m.rows.forEach(r=>{
+    if(cfg.simple){
+      const exists = state.refData[key].some(x=>x.toLowerCase()===r.toLowerCase());
+      if(exists){ skippedDup++; return; }
+      state.refData[key].push(r);
+      added++;
+    } else {
+      const v1 = r[cfg.field1], v2 = r[cfg.field2];
+      const exists = state.refData[key].some(x=>x[cfg.field1].toLowerCase()===v1.toLowerCase() && (x[cfg.field2]||'').toLowerCase()===(v2||'').toLowerCase());
+      if(exists){ skippedDup++; return; }
+      if(v2 && cfg.parentKey){
+        const parentExists = state.refData[cfg.parentKey].some(p=>p.toLowerCase()===v2.toLowerCase());
+        if(!parentExists){ state.refData[cfg.parentKey].push(v2); autoParent++; }
+      }
+      state.refData[key].push({ [cfg.field1]: v1, [cfg.field2]: v2 });
+      added++;
+    }
+  });
+
+  ui.modal = null;
+  saveState();
+  render();
+  alert(`Import selesai. ${added} data ditambahkan.${skippedDup?` ${skippedDup} baris dilewati karena sudah ada.`:''}${autoParent?` ${autoParent} data induk (${key==='cities'?'Provinsi':'Kategori'}) otomatis ditambahkan.`:''}`);
+}
+
+/* ---------------- Auto stock deduction from ticket sparepart usage ---------------- */
+function scopeStoreFor(tipe, lokasiId){
+  // Pickup center tickets don't hold their own sparepart stock; repairs happen centrally, so usage is
+  // deducted from the Pusat stock. Adjust here if your workflow routes pickup repairs to a specific branch instead.
+  if(tipe==='cabang') return { key:'cabang', branch: lokasiId, store: branchStockStore(lokasiId) };
+  return { key:'pusat', branch: null, store: state.sparepartPusat };
+}
+
+function getSparepartLines(c){
+  const lines = {};
+  for(let i=1;i<=3;i++){
+    const nama = String((c && c['sp'+i+'Nama']) || '').trim();
+    lines[i] = nama ? {
+      kode: String(c['sp'+i+'Kode']||'').trim(),
+      nama,
+      qty: Number(c['sp'+i+'Qty']||0),
+      harga: Number(c['sp'+i+'Harga']||0)
+    } : null;
+  }
+  return lines;
+}
+
+function getOrCreateItem(store, kode, nama, harga){
+  let item = kode ? store.stock.find(s=>s.kode===kode) : null;
+  if(!item) item = store.stock.find(s=>s.nama && s.nama.toLowerCase()===String(nama||'').toLowerCase());
+  if(!item){
+    item = { kode: kode || ('SP-'+Math.floor(Math.random()*9000+1000)), nama, qty:0, harga: harga||0 };
+    store.stock.push(item);
+  }
+  return item;
+}
+
+function applyStockDelta(scope, kode, nama, harga, qtyChange, ticketNo, note){
+  if(!qtyChange) return;
+  const item = getOrCreateItem(scope.store, kode, nama, harga);
+  if(harga) item.harga = harga;
+  item.qty += qtyChange;
+  const type = qtyChange<0
+    ? (scope.key==='pusat' ? 'terpakai_pusat' : 'terpakai_cabang')
+    : (scope.key==='pusat' ? 'pengembalian_pusat' : 'pengembalian_cabang');
+  scope.store.tx.push({ date: new Date().toISOString(), type, kode:item.kode, nama:item.nama, qty: qtyChange, ticket: ticketNo||'', note: note||'' });
+}
+
+// Applies one manual/bulk stock transaction line and, where the transaction implies a transfer
+// between Pusat and a Cabang, automatically mirrors the opposite side so both stock lists stay in sync.
+function applySingleStockTx(scope, type, kode, nama, qty, harga, ticket, note, cabangId){
+  const store = scope.store;
+  const isIncoming = ['terima_gudang','terima_cabang','terima_pusat'].includes(type);
+  const item = getOrCreateItem(store, kode, nama, harga);
+  if(harga) item.harga = harga;
+  item.qty += isIncoming ? qty : -qty;
+  store.tx.push({ date: new Date().toISOString(), type, kode:item.kode, nama:item.nama, qty: isIncoming?qty:-qty, ticket:ticket||'', note:note||'' });
+
+  // Mirror the counterpart side automatically so Pusat <-> Cabang stock stays consistent.
+  if(scope.key==='pusat'){
+    if(type==='kirim_cabang' && cabangId){
+      const bStore = branchStockStore(cabangId);
+      const bItem = getOrCreateItem(bStore, item.kode, item.nama, item.harga);
+      bItem.qty += qty;
+      bStore.tx.push({ date:new Date().toISOString(), type:'terima_pusat', kode:bItem.kode, nama:bItem.nama, qty, ticket:ticket||'', note:`Diterima dari Pusat (otomatis dari transaksi Kirim ke Cabang)` });
+    }
+    if(type==='terima_cabang' && cabangId){
+      const bStore = branchStockStore(cabangId);
+      const bItem = getOrCreateItem(bStore, item.kode, item.nama, item.harga);
+      bItem.qty -= qty;
+      bStore.tx.push({ date:new Date().toISOString(), type:'kirim_pusat', kode:bItem.kode, nama:bItem.nama, qty:-qty, ticket:ticket||'', note:`Dikirim ke Pusat (otomatis dari transaksi Terima dari Cabang)` });
+    }
+  } else if(scope.key==='cabang'){
+    const pStore = state.sparepartPusat;
+    if(type==='kirim_pusat'){
+      const pItem = getOrCreateItem(pStore, item.kode, item.nama, item.harga);
+      pItem.qty += qty;
+      pStore.tx.push({ date:new Date().toISOString(), type:'terima_cabang', kode:pItem.kode, nama:pItem.nama, qty, ticket:ticket||'', note:`Diterima dari ${branchName(scope.branch)} (otomatis)` });
+    }
+    if(type==='terima_pusat'){
+      const pItem = getOrCreateItem(pStore, item.kode, item.nama, item.harga);
+      pItem.qty -= qty;
+      pStore.tx.push({ date:new Date().toISOString(), type:'kirim_cabang', kode:pItem.kode, nama:pItem.nama, qty:-qty, ticket:ticket||'', note:`Dikirim ke ${branchName(scope.branch)} (otomatis)` });
+    }
+  }
+}
+
+// Reconciles sparepart stock when a ticket is created (oldC=null), edited (both set), or deleted (newC=null).
+function adjustStockForTicket(oldC, newC){
+  const oldLines = oldC ? getSparepartLines(oldC) : {1:null,2:null,3:null};
+  const newLines = newC ? getSparepartLines(newC) : {1:null,2:null,3:null};
+  const oldScope = oldC ? scopeStoreFor(oldC.lokasiTipe, oldC.lokasiId) : null;
+  const newScope = newC ? scopeStoreFor(newC.lokasiTipe, newC.lokasiId) : null;
+  const ticketNo = (newC && newC.ticket) || (oldC && oldC.ticket) || '';
+  const sameScope = oldScope && newScope && oldScope.key===newScope.key && oldScope.branch===newScope.branch;
+
+  for(let i=1;i<=3;i++){
+    const o = oldLines[i], n = newLines[i];
+    const sameItem = o && n && ((o.kode && n.kode && o.kode===n.kode) || ((!o.kode || !n.kode) && o.nama.toLowerCase()===n.nama.toLowerCase()));
+
+    if(o && n && sameScope && sameItem){
+      const delta = (n.qty||0) - (o.qty||0);
+      if(delta !== 0){
+        applyStockDelta(newScope, n.kode||o.kode, n.nama, n.harga, -delta, ticketNo,
+          delta>0 ? `Tambahan part digunakan (update tiket ${ticketNo})` : `Qty part dikurangi (update tiket ${ticketNo})`);
+      }
+    } else {
+      if(o && o.qty>0 && oldScope){
+        applyStockDelta(oldScope, o.kode, o.nama, o.harga, o.qty, ticketNo, `Pengembalian stok — tiket ${ticketNo} diubah/dihapus`);
+      }
+      if(n && n.qty>0 && newScope){
+        applyStockDelta(newScope, n.kode, n.nama, n.harga, -n.qty, ticketNo, `Part digunakan pada tiket ${ticketNo}`);
+      }
+    }
+  }
+  if(newC) newC._stockSynced = true;
+}
+
+function downloadDropdownButtons(isPusat, scopeKey, store){
+  if(isPusat){
+    return `
+      <button class="btn btn-sm btn-outline" data-action="dl-stock-list" data-scope="pusat">Excel: List Stok</button>
+      <button class="btn btn-sm btn-outline" data-action="dl-stock-tx" data-scope="pusat" data-type="kirim_cabang">Excel: Kirim ke Cabang</button>
+      <button class="btn btn-sm btn-outline" data-action="dl-stock-tx" data-scope="pusat" data-type="terpakai_pusat">Excel: Terpakai Pusat</button>
+      <button class="btn btn-sm btn-outline" data-action="dl-stock-opname" data-scope="pusat">Excel: Stok Opname</button>`;
+  }
+  return `
+    <button class="btn btn-sm btn-outline" data-action="dl-stock-list" data-scope="cabang" data-branch="${scopeKey}">Excel: List Stok</button>
+    <button class="btn btn-sm btn-outline" data-action="dl-stock-tx" data-scope="cabang" data-branch="${scopeKey}" data-type="terpakai_cabang">Excel: Terpakai Cabang</button>
+    <button class="btn btn-sm btn-outline" data-action="dl-stock-opname" data-scope="cabang" data-branch="${scopeKey}">Excel: Stok Opname</button>`;
+}
+
+function renderStockTxModal(m){
+  const isPusat = m.scope==='pusat';
+  const txTypes = isPusat ?
+    [['terima_gudang','Terima dari Gudang (masuk)'],['kirim_cabang','Kirim ke Cabang (keluar)'],['terima_cabang','Terima dari Cabang (masuk)'],['terpakai_pusat','Terpakai di Pusat (keluar)']] :
+    [['terima_pusat','Terima dari Pusat (masuk)'],['kirim_pusat','Kirim Balik ke Pusat (keluar)'],['terpakai_cabang','Terpakai di Cabang (keluar)']];
+  const type = m.txType || txTypes[0][0];
+  const mode = m.mode || 'manual';
+  const needsBranchField = isPusat && (type==='kirim_cabang' || type==='terima_cabang');
+  const branchFieldLabel = type==='kirim_cabang' ? 'Cabang Tujuan' : 'Cabang Asal';
+  const rows = m.rows || null;
+
+  const branchField = needsBranchField ? `
+    <div class="field">
+      <label>${branchFieldLabel}</label>
+      <select id="txCabang">
+        <option value="">— pilih cabang —</option>
+        ${state.branches.map(b=>`<option value="${b.id}" ${m.cabangId===b.id?'selected':''}>${esc(b.nama)}</option>`).join('')}
+      </select>
+      <div class="helper">Stok di cabang ini akan disesuaikan otomatis (tidak perlu input transaksi terpisah di sisi cabang).</div>
+    </div>` : '';
+
+  const manualPane = `
+    <div class="grid">
+      <div class="field"><label>Kode Sparepart</label><input type="text" id="txKode" placeholder="mis. SP-0012"></div>
+      <div class="field"><label>Nama Sparepart</label><input type="text" id="txNama" placeholder="mis. Cuff Dewasa"></div>
+      <div class="field"><label>Jumlah</label><input type="number" id="txQty" min="1" value="1"></div>
+      <div class="field"><label>Harga Satuan (Rp)</label><input type="number" id="txHarga" min="0" value="0"></div>
+      <div class="field"><label>Referensi No. Tiket (opsional)</label><input type="text" id="txTicket"></div>
+      <div class="field"><label>Catatan</label><input type="text" id="txNote"></div>
+    </div>`;
+
+  const excelPane = `
+    <div class="desc" style="margin-top:0">Unggah file Excel berisi banyak item sekaligus: kolom <b>Kode Part, Nama Part, Jumlah, Harga Satuan</b>${needsBranchField?', dan opsional kolom <b>Lokasi tujuan</b> untuk menimpa cabang per baris':''}.</div>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn btn-outline btn-sm" data-action="dl-tx-template" data-needsbranch="${needsBranchField?'1':'0'}">⬇ Template Excel</button>
+    </div>
+    <div class="field"><label>Pilih File Excel (.xlsx / .xls)</label><input type="file" id="txUploadFile" accept=".xlsx,.xls"></div>
+    ${rows ? `
+      <div class="banner blue">${rows.length} baris siap diproses.${m.skipped?` ${m.skipped} baris dilewati karena data tidak lengkap.`:''}</div>
+      <div class="table-wrap" style="max-height:240px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Kode</th><th>Nama</th><th>Qty</th><th>Harga</th>${needsBranchField?'<th>Cabang (dari file)</th>':''}</tr></thead>
+          <tbody>
+            ${rows.slice(0,40).map(r=>`<tr><td>${esc(r.kode)}</td><td>${esc(r.nama)}</td><td>${r.qty}</td><td>${fmtMoney(r.harga)}</td>${needsBranchField?`<td>${r.cabangRaw?esc(r.cabangRaw)+(resolveBranchId(r.cabangRaw)?'':' <span class="tag" style="color:var(--danger)">(tidak dikenali, pakai dropdown)</span>'):'<span class="tag">(pakai dropdown)</span>'}</td>`:''}</tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${rows.length>40?`<div class="helper">Menampilkan 40 dari ${rows.length} baris.</div>`:''}
+    ` : `<div class="empty">Pilih file untuk melihat pratinjau data.</div>`}
+  `;
+
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" style="max-width:600px" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Transaksi Sparepart</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="field"><label>Jenis Transaksi</label>
+        <select id="txType">${txTypes.map(t=>`<option value="${t[0]}" ${type===t[0]?'selected':''}>${t[1]}</option>`).join('')}</select>
+      </div>
+      ${branchField}
+      <div class="pill-tabs">
+        <button class="${mode==='manual'?'active':''}" data-action="tx-mode" data-mode="manual" type="button">Input Manual</button>
+        <button class="${mode==='excel'?'active':''}" data-action="tx-mode" data-mode="excel" type="button">Upload Excel</button>
+      </div>
+      ${mode==='manual' ? manualPane : excelPane}
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="confirm-stocktx" data-scope="${m.scope}" data-branch="${m.branch||''}" ${mode==='excel' && (!rows || !rows.length) ? 'disabled':''}>
+          ${mode==='excel' ? `Import ${rows?rows.length:0} Transaksi` : 'Simpan Transaksi'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderOpnameModal(m){
+  const isPusat = m.scope==='pusat';
+  const store = isPusat ? state.sparepartPusat : branchStockStore(m.branch);
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Stok Opname ${isPusat?'Pusat':'— '+esc(branchName(m.branch))}</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="desc">Masukkan jumlah fisik hasil hitung. Selisih otomatis dihitung terhadap stok sistem, dan stok sistem akan disesuaikan setelah disimpan.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Kode</th><th>Nama</th><th>Stok Sistem</th><th>Stok Fisik</th><th>Selisih</th></tr></thead>
+        <tbody>
+        ${store.stock.map((s,idx)=>`<tr>
+          <td>${esc(s.kode)}</td><td>${esc(s.nama)}</td><td>${s.qty}</td>
+          <td><input type="number" class="opname-input" data-idx="${idx}" value="${s.qty}" style="width:90px"></td>
+          <td class="opname-diff" data-idx="${idx}">0</td>
+        </tr>`).join('')}
+        </tbody>
+      </table></div>
+      ${!store.stock.length?'<div class="empty">Belum ada item stok untuk di-opname.</div>':''}
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="confirm-opname" data-scope="${m.scope}" data-branch="${m.branch||''}" ${!store.stock.length?'disabled':''}>Simpan Hasil Opname</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderUploadStockModal(m){
+  const isPusat = m.scope==='pusat';
+  const rows = m.rows || null;
+  const skipped = m.skipped || 0;
+  const incomingLabel = isPusat ? 'Terima dari Gudang' : 'Terima dari Pusat';
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Upload Data Stok dari Excel</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="desc">Lokasi: <b>${isPusat?'Pusat':esc(branchName(m.branch))}</b>. Format kolom yang didukung: <b>PIM Code, Part Name, Class, Status, Model, Price, Qty, Lokasi</b> (nama kolom cukup mirip, tidak harus persis sama). Belum punya file? Unduh templatenya dulu.</div>
+      <div class="field">
+        <label>Pilih File Excel (.xlsx / .xls)</label>
+        <input type="file" id="uploadStockFile" accept=".xlsx,.xls">
+      </div>
+      <div class="field">
+        <label>Jenis Import</label>
+        <select id="uploadStockMode">
+          <option value="set" ${m.mode!=='add'?'selected':''}>Set sebagai stok saat ini (timpa jumlah stok yang ada)</option>
+          <option value="add" ${m.mode==='add'?'selected':''}>Tambahkan sebagai stok masuk (${incomingLabel})</option>
+        </select>
+        <div class="helper">"Set" cocok untuk memuat data stok awal / master list pertama kali. "Tambahkan" cocok untuk transaksi barang masuk rutin — jumlah pada file akan ditambahkan ke stok yang sudah ada.</div>
+      </div>
+      ${rows ? `
+        <div class="banner blue">${rows.length} baris valid siap diimpor.${skipped?` ${skipped} baris dilewati karena kolom Lokasi tidak cocok dengan lokasi ini atau data tidak lengkap.`:''}</div>
+        <div class="table-wrap" style="max-height:260px;overflow-y:auto">
+          <table>
+            <thead><tr><th>Kode</th><th>Nama</th><th>Model</th><th>Qty</th><th>Harga</th></tr></thead>
+            <tbody>
+              ${rows.slice(0,30).map(r=>`<tr><td>${esc(r.kode)||'-'}</td><td>${esc(r.nama)}</td><td>${esc(r.model)||'-'}</td><td>${r.qty}</td><td>${fmtMoney(r.harga)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${rows.length>30?`<div class="helper">Menampilkan 30 dari ${rows.length} baris.</div>`:''}
+      ` : `<div class="empty">Pilih file untuk melihat pratinjau data.</div>`}
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="confirm-upload-stock" data-scope="${m.scope}" data-branch="${m.branch||''}" ${!rows||!rows.length?'disabled':''}>Import ${rows?rows.length:0} Item</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   EVENT BINDING
+   ========================================================================= */
+function bindEvents(){
+  // nav
+  document.querySelectorAll('[data-nav]').forEach(el=>el.addEventListener('click', ()=>{
+    ui.tab = el.getAttribute('data-nav'); ui.subtab=null; ui.modal=null; ui.page=null; render();
+  }));
+  document.querySelectorAll('[data-navsub]').forEach(el=>el.addEventListener('click', ()=>{
+    ui.subtab = el.getAttribute('data-navsub'); ui.page=null; render();
+  }));
+  document.querySelectorAll('[data-navsub2]').forEach(el=>el.addEventListener('click', ()=>{
+    ui.subtab = el.getAttribute('data-navsub2'); render();
+  }));
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if(logoutBtn) logoutBtn.addEventListener('click', doLogout);
+
+  const roleSel = document.getElementById('roleSel');
+  if(roleSel) roleSel.addEventListener('change', e=>{
+    ui.role = e.target.value; ui.roleRef=null; ui.tab = 'data-customer'; ui.subtab=null; render();
+  });
+  const roleRefSel = document.getElementById('roleRefSel');
+  if(roleRefSel) roleRefSel.addEventListener('change', e=>{ ui.roleRef = e.target.value; render(); });
+
+  const branchFilter = document.getElementById('branchFilter');
+  if(branchFilter) branchFilter.addEventListener('change', e=>{ ui.branchFilter = e.target.value; render(); });
+  const pickupFilter = document.getElementById('pickupFilter');
+  if(pickupFilter) pickupFilter.addEventListener('change', e=>{ ui.pickupFilter = e.target.value; render(); });
+
+  const searchBox = document.getElementById('searchBox');
+  if(searchBox){
+    searchBox.addEventListener('input', e=>{ ui.search = e.target.value; });
+    searchBox.addEventListener('keyup', e=>{ if(e.key==='Enter'){ render(); document.getElementById('searchBox') && document.getElementById('searchBox').focus(); } });
+    searchBox.addEventListener('blur', ()=>render());
+  }
+
+  const stockBranchSel = document.getElementById('stockBranchSel');
+  if(stockBranchSel) stockBranchSel.addEventListener('change', e=>{ ui.stockBranch = e.target.value; render(); });
+
+  // resepsionis inline form host
+  const intakeHost = document.getElementById('intakeFormHost');
+  if(intakeHost){
+    if(!ui.intakeDraft) ui.intakeDraft = { lokasiTipe:'pusat' };
+    intakeHost.innerHTML = buildCustomerFormHtml(ui.intakeDraft, 'pusat') +
+      `<div class="footer-actions"><button class="btn btn-primary" id="submitIntake">Simpan & Buat Tiket</button></div>`;
+    bindDynamicFormFields(intakeHost, ui.intakeDraft, true);
+    document.getElementById('submitIntake').addEventListener('click', ()=>{
+      const c = { ...ui.intakeDraft, id: uid('cust'), lokasiTipe:'pusat', lokasiId:null, createdAt: Date.now() };
+      c.ticket = nextTicket('pusat', null);
+      if(!c.repairStatus) c.repairStatus = 'Diterima SC';
+      state.customers.push(c);
+      adjustStockForTicket(null, c);
+      ui.intakeDraft = { lokasiTipe:'pusat' };
+      saveState();
+      alert('Tersimpan. No. Tiket: '+c.ticket);
+      render();
+    });
+  }
+
+  // generic data-action buttons
+  document.querySelectorAll('[data-action]').forEach(el=>{
+    el.addEventListener('click', (e)=>handleAction(el.getAttribute('data-action'), el, e));
+  });
+
+  // modal overlay close
+  document.querySelectorAll('[data-close="overlay"]').forEach(el=>el.addEventListener('click', ()=>{ ui.modal=null; render(); }));
+
+  // customer form page dynamic fields
+  const custFormBody = document.getElementById('customerFormBody');
+  if(custFormBody && ui.page && ui.page.type==='customer-form'){
+    bindDynamicFormFields(custFormBody, ui.page.draft, false);
+    const lokasiSel = document.querySelector('[data-field="lokasiId"]');
+    if(lokasiSel) lokasiSel.addEventListener('change', e=>{ ui.page.draft.lokasiId = e.target.value; });
+  }
+
+  // opname diff calc
+  document.querySelectorAll('.opname-input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const idx = inp.getAttribute('data-idx');
+      const store = ui.modal.scope==='pusat' ? state.sparepartPusat : branchStockStore(ui.modal.branch);
+      const sys = store.stock[idx].qty;
+      const diff = Number(inp.value||0) - sys;
+      const cell = document.querySelector(`.opname-diff[data-idx="${idx}"]`);
+      if(cell){ cell.textContent = (diff>0?'+':'')+diff; cell.className = 'opname-diff '+(diff<0?'stock-neg':(diff>0?'stock-low':'')); }
+    });
+  });
+
+  // upload stok excel: file select + mode change
+  const uploadFileInput = document.getElementById('uploadStockFile');
+  if(uploadFileInput && ui.modal && ui.modal.type==='uploadStock'){
+    uploadFileInput.addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev)=>{
+        try{
+          const data = new Uint8Array(ev.target.result);
+          const isPusat = ui.modal.scope==='pusat';
+          const { rows, skipped } = parseStockWorkbook(data, isPusat, ui.modal.branch);
+          if(!rows.length){ alert('Tidak ditemukan baris data yang valid pada file ini. Pastikan file memiliki kolom Nama/Part Name atau Kode/PIM Code.'); }
+          ui.modal.rows = rows;
+          ui.modal.skipped = skipped;
+          render();
+        }catch(err){
+          console.error(err);
+          alert('Gagal membaca file Excel. Pastikan format file .xlsx / .xls valid.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+    const modeSel = document.getElementById('uploadStockMode');
+    if(modeSel) modeSel.addEventListener('change', e=>{ ui.modal.mode = e.target.value; });
+  }
+
+  // transaksi sparepart modal: jenis transaksi / cabang / upload excel
+  if(ui.modal && ui.modal.type==='stockTx'){
+    const txTypeSel = document.getElementById('txType');
+    if(txTypeSel) txTypeSel.addEventListener('change', e=>{ ui.modal.txType = e.target.value; render(); });
+    const txCabangSel = document.getElementById('txCabang');
+    if(txCabangSel) txCabangSel.addEventListener('change', e=>{ ui.modal.cabangId = e.target.value; });
+    const txUploadFile = document.getElementById('txUploadFile');
+    if(txUploadFile){
+      txUploadFile.addEventListener('change', (e)=>{
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev)=>{
+          try{
+            const data = new Uint8Array(ev.target.result);
+            const { rows, skipped } = parseTransferWorkbook(data);
+            if(!rows.length){ alert('Tidak ditemukan baris data yang valid. Pastikan file memiliki kolom Kode/Nama Part, Jumlah, dan Harga.'); }
+            ui.modal.rows = rows;
+            ui.modal.skipped = skipped;
+            render();
+          }catch(err){
+            console.error(err);
+            alert('Gagal membaca file Excel. Pastikan format file .xlsx / .xls valid.');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+  }
+
+  // setting tab: ref data upload modal
+  if(ui.modal && ui.modal.type==='refUpload'){
+    const refUploadFile = document.getElementById('refUploadFile');
+    if(refUploadFile){
+      refUploadFile.addEventListener('change', (e)=>{
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev)=>{
+          try{
+            const data = new Uint8Array(ev.target.result);
+            const { rows, skipped } = parseRefWorkbook(data, ui.modal.key);
+            if(!rows.length){ alert('Tidak ditemukan data valid pada file ini. Periksa kembali nama kolomnya.'); }
+            ui.modal.rows = rows;
+            ui.modal.skipped = skipped;
+            render();
+          }catch(err){
+            console.error(err);
+            alert('Gagal membaca file Excel. Pastikan format file .xlsx / .xls valid.');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    const refUploadMode = document.getElementById('refUploadMode');
+    if(refUploadMode) refUploadMode.addEventListener('change', e=>{ ui.modal.mode = e.target.value; });
+  }
+}
+
+function bindDynamicFormFields(container, draft, isPublic){
+  container.querySelectorAll('[data-field]').forEach(el=>{
+    const key = el.getAttribute('data-field');
+    el.addEventListener('change', ()=>{
+      if(el.type==='checkbox') draft[key] = el.checked;
+      else draft[key] = el.value;
+
+      if(key==='provinsi'){ draft.kota=''; refreshFormSection(container, draft, isPublic); }
+      if(key==='kategori'){ draft.model=''; refreshFormSection(container, draft, isPublic); }
+    });
+  });
+}
+
+function refreshFormSection(container, draft, isPublic){
+  container.innerHTML = buildCustomerFormHtml(draft, draft.lokasiTipe) +
+    (isPublic ? `<div class="footer-actions"><button class="btn btn-primary" id="submitIntake">Simpan & Buat Tiket</button></div>` : '');
+  bindDynamicFormFields(container, draft, isPublic);
+  if(isPublic){
+    document.getElementById('submitIntake').addEventListener('click', ()=>{
+      const c = { ...draft, id: uid('cust'), lokasiTipe:'pusat', lokasiId:null, createdAt: Date.now() };
+      c.ticket = nextTicket('pusat', null);
+      if(!c.repairStatus) c.repairStatus = 'Diterima SC';
+      state.customers.push(c);
+      adjustStockForTicket(null, c);
+      ui.intakeDraft = { lokasiTipe:'pusat' };
+      saveState();
+      alert('Tersimpan. No. Tiket: '+c.ticket);
+      render();
+    });
+  }
+}
+
+/* ---------------- Action handler ---------------- */
+function handleAction(action, el){
+  if(action==='close-modal'){ ui.modal=null; render(); return; }
+  if(action==='close-form'){ ui.page=null; render(); return; }
+  if(action==='migrate-tickets'){
+    if(confirm('Ini akan menomori ulang SEMUA tiket yang ada ke format baru OEC-KotaCode-YYMMDD-Urut (berdasarkan tanggal tiket itu dibuat). Referensi di Status Pembayaran dan Riwayat Sparepart Stok akan ikut diperbarui. Lanjutkan?')){
+      const result = migrateTicketFormat();
+      saveState();
+      render();
+      alert(`Migrasi selesai. ${result.renamed} dari ${result.total} tiket dinomori ulang ke format baru.`);
+    }
+    return;
+  }
+
+  if(action==='new-customer'){ openCustomerForm(el.getAttribute('data-tipe'), null); return; }
+  if(action==='view-customer'){ openCustomerForm(currentTipeFromId(el.getAttribute('data-id')), el.getAttribute('data-id')); return; }
+  if(action==='save-customer'){ saveCustomerFromForm(); return; }
+  if(action==='delete-customer'){
+    if(confirm('Hapus tiket ini? Sparepart yang sudah terpakai pada tiket ini akan dikembalikan ke stok.')){
+      const target = state.customers.find(c=>c.id===el.getAttribute('data-id'));
+      state.customers = state.customers.filter(c=>c.id!==el.getAttribute('data-id'));
+      if(target) adjustStockForTicket(target, null);
+      ui.page=null; saveState(); render();
+    }
+    return;
+  }
+  if(action==='export-customer'){
+    const tipe = el.getAttribute('data-tipe');
+    const rows = visibleCustomers(tipe).map(customerToRow);
+    exportExcel(`DataCustomer-${tipe}-${todayStr()}.xlsx`, rows, tipe);
+    return;
+  }
+
+  if(action==='new-branch'){ ui.modal={type:'branch'}; render(); return; }
+  if(action==='save-branch'){
+    const nama = document.getElementById('bNama').value.trim();
+    const partner = document.getElementById('bPartner').value;
+    const kota = document.getElementById('bKota').value.trim();
+    if(!nama){ alert('Nama OEC wajib diisi'); return; }
+    state.branches.push({id:uid('brc'), nama, partner, kota, createdAt:Date.now()});
+    ui.modal=null; saveState(); render(); return;
+  }
+  if(action==='delete-branch'){
+    if(confirm('Hapus cabang ini? Data tiket terkait tidak akan terhapus.')){
+      state.branches = state.branches.filter(b=>b.id!==el.getAttribute('data-id'));
+      saveState(); render();
+    }
+    return;
+  }
+
+  if(action==='new-pickup'){ ui.modal={type:'pickupCenter'}; render(); return; }
+  if(action==='save-pickup'){
+    const nama = document.getElementById('pNama').value.trim();
+    const partner = document.getElementById('pPartner').value;
+    const kota = document.getElementById('pKota').value.trim();
+    if(!nama){ alert('Nama OPC wajib diisi'); return; }
+    state.pickups.push({id:uid('pcu'), nama, partner, kota, createdAt:Date.now()});
+    ui.modal=null; saveState(); render(); return;
+  }
+  if(action==='delete-pickup'){
+    if(confirm('Hapus pickup center ini? Data tiket terkait tidak akan terhapus.')){
+      state.pickups = state.pickups.filter(p=>p.id!==el.getAttribute('data-id'));
+      saveState(); render();
+    }
+    return;
+  }
+
+  if(action==='open-payment'){ ui.modal={type:'payment', id: el.getAttribute('data-id')}; render(); return; }
+  if(action==='confirm-payment'){
+    const c = state.customers.find(x=>x.id===el.getAttribute('data-id'));
+    const nominal = Number(document.getElementById('payNominal').value||0);
+    const bank = document.getElementById('payBank').value;
+    const vaCode = generateVaCode(bank);
+    state.payments[c.ticket] = { nominal, bank, vaCode, generatedAt: Date.now(), paid:false };
+    ui.modal=null; saveState(); render(); return;
+  }
+  if(action==='mark-paid'){
+    const t = el.getAttribute('data-ticket');
+    if(state.payments[t]){ state.payments[t].paid = true; saveState(); render(); }
+    return;
+  }
+  if(action==='dl-offer'){
+    const c = state.customers.find(x=>x.id===el.getAttribute('data-id'));
+    downloadOfferPdf(c); return;
+  }
+  if(action==='dl-invoice'){
+    const c = state.customers.find(x=>x.id===el.getAttribute('data-id'));
+    downloadInvoicePdf(c, state.payments[c.ticket]); return;
+  }
+
+  if(action==='new-stocktx'){ ui.modal={type:'stockTx', scope:el.getAttribute('data-scope'), branch:el.getAttribute('data-branch')||null, mode:'manual', rows:null, skipped:0, cabangId:null}; render(); return; }
+  if(action==='confirm-stocktx'){ confirmStockTx(el.getAttribute('data-scope'), el.getAttribute('data-branch')||null); return; }
+  if(action==='tx-mode'){ ui.modal.mode = el.getAttribute('data-mode'); render(); return; }
+  if(action==='dl-tx-template'){
+    const needsBranch = el.getAttribute('data-needsbranch')==='1';
+    const row = { "Kode Part":"3787306-8", "Nama Part":"PUMP AIR ASSY [NE-C28-C1]", "Jumlah":2, "Harga Satuan":150000 };
+    if(needsBranch) row["Lokasi tujuan"] = state.branches[0] ? state.branches[0].nama : "OEC Bandung";
+    exportExcel('Template-Transaksi-Sparepart.xlsx', [row], 'Template');
+    return;
+  }
+  if(action==='new-opname'){ ui.modal={type:'opname', scope:el.getAttribute('data-scope'), branch:el.getAttribute('data-branch')||null}; render(); return; }
+  if(action==='confirm-opname'){ confirmOpname(el.getAttribute('data-scope'), el.getAttribute('data-branch')||null); return; }
+
+  if(action==='open-upload-stock'){ ui.modal={type:'uploadStock', scope:el.getAttribute('data-scope'), branch:el.getAttribute('data-branch')||null, rows:null, skipped:0, mode:'set'}; render(); return; }
+  if(action==='confirm-upload-stock'){ confirmUploadStock(el.getAttribute('data-scope'), el.getAttribute('data-branch')||null); return; }
+  if(action==='dl-stock-template'){
+    const template = [{ "PIM Code":"5371514-6", "Part Name":"WATER TANK (NE-U780)", "Class":"MAINTENANCE PARTS", "Status":"Active", "Model":"NE-U780-AP", "Price":200, "Qty":2, "Lokasi":"Pusat" }];
+    exportExcel('Template-Upload-Stok-Sparepart.xlsx', template, 'Template');
+    return;
+  }
+
+  if(action==='open-upload-ref'){ ui.modal={type:'refUpload', key:el.getAttribute('data-key'), mode:'add', rows:null, skipped:0}; render(); return; }
+  if(action==='confirm-upload-ref'){ confirmUploadRef(el.getAttribute('data-key')); return; }
+  if(action==='add-ref-item'){ addRefItem(el.getAttribute('data-key')); return; }
+  if(action==='delete-ref-item'){
+    if(confirm('Hapus data ini? Data yang sudah dipakai pada tiket/cabang lain tidak akan otomatis berubah.')){
+      const key = el.getAttribute('data-key');
+      const idx = Number(el.getAttribute('data-idx'));
+      state.refData[key].splice(idx,1);
+      saveState(); render();
+    }
+    return;
+  }
+  if(action==='dl-ref-template'){
+    const key = el.getAttribute('data-key');
+    exportExcel(`Template-${key}.xlsx`, refTemplateRows(key), 'Template');
+    return;
+  }
+
+  if(action==='dl-stock-list'){
+    const store = el.getAttribute('data-scope')==='pusat' ? state.sparepartPusat : branchStockStore(el.getAttribute('data-branch'));
+    exportExcel(`StokSparepart-${el.getAttribute('data-scope')}-${todayStr()}.xlsx`, store.stock, 'Stok');
+    return;
+  }
+  if(action==='dl-stock-tx'){
+    const store = el.getAttribute('data-scope')==='pusat' ? state.sparepartPusat : branchStockStore(el.getAttribute('data-branch'));
+    const type = el.getAttribute('data-type');
+    const rows = store.tx.filter(t=>t.type===type).map(t=>({Tanggal:fmtDate(t.date),Jenis:txLabel(t.type),Kode:t.kode,Nama:t.nama,Qty:t.qty,Tiket:t.ticket||'',Catatan:t.note||''}));
+    exportExcel(`Transaksi-${txLabel(type)}-${todayStr()}.xlsx`, rows, 'Transaksi');
+    return;
+  }
+  if(action==='dl-stock-opname'){
+    const store = el.getAttribute('data-scope')==='pusat' ? state.sparepartPusat : branchStockStore(el.getAttribute('data-branch'));
+    const rows = store.tx.filter(t=>t.type==='opname').map(t=>({Tanggal:fmtDate(t.date),Kode:t.kode,Nama:t.nama,'Stok Sebelum':t.before,'Stok Sesudah':t.qty,'Selisih':t.diff,Catatan:t.note||''}));
+    exportExcel(`StokOpname-${todayStr()}.xlsx`, rows, 'Opname');
+    return;
+  }
+}
+
+function currentTipeFromId(id){
+  const c = state.customers.find(x=>x.id===id);
+  return c ? c.lokasiTipe : 'pusat';
+}
+
+function generateVaCode(bank){
+  const prefixMap = {"Alfamart":"ALF","Indomaret":"IDM","VA BRI":"BRI","VA BCA":"BCA","VA BNI":"BNI","VA Permata":"PRM","VA Mandiri":"MDR"};
+  const p = prefixMap[bank] || 'VA';
+  const num = Math.floor(1000000000 + Math.random()*8999999999).toString();
+  return `${p}-${num}`;
+}
+
+function saveCustomerFromForm(){
+  const m = ui.page;
+  const d = m.draft;
+  if(!d.namaCustomer || !d.namaCustomer.trim()){ alert('Nama Customer wajib diisi.'); return; }
+  if(!d.hp1 || !d.hp1.trim()){ alert('No. HP/WhatsApp 1 wajib diisi.'); return; }
+  if((m.tipe==='cabang' || m.tipe==='pickup') && !d.lokasiId){ alert('Pilih cabang / pickup center terlebih dahulu.'); return; }
+
+  if(m.id){
+    const idx = state.customers.findIndex(c=>c.id===m.id);
+    const before = { ...state.customers[idx] };
+    state.customers[idx] = { ...state.customers[idx], ...d };
+    adjustStockForTicket(before, state.customers[idx]);
+  } else {
+    d.id = uid('cust');
+    d.createdAt = Date.now();
+    d.ticket = nextTicket(m.tipe, d.lokasiId);
+    if(!d.repairStatus) d.repairStatus = m.tipe==='pusat' ? 'Diterima SC' : (m.tipe==='pickup' ? 'Diterima PC' : 'Diterima SC');
+    state.customers.push(d);
+    adjustStockForTicket(null, d);
+  }
+  ui.page = null;
+  saveState();
+  render();
+}
+
+function confirmStockTx(scope, branchId){
+  const m = ui.modal;
+  const isPusat = scope==='pusat';
+  const store = isPusat ? state.sparepartPusat : branchStockStore(branchId);
+  const storeScope = { key: isPusat?'pusat':'cabang', branch: isPusat?null:branchId, store };
+  const type = m.txType || document.getElementById('txType').value;
+  const needsBranchField = isPusat && (type==='kirim_cabang' || type==='terima_cabang');
+  const cabangId = m.cabangId || null;
+
+  if(needsBranchField && !cabangId && (m.mode||'manual')==='manual'){
+    alert(`Pilih ${type==='kirim_cabang'?'Cabang Tujuan':'Cabang Asal'} terlebih dahulu.`);
+    return;
+  }
+
+  if((m.mode||'manual')==='excel'){
+    if(!m.rows || !m.rows.length) return;
+    let processed = 0, unresolvedBranch = 0;
+    m.rows.forEach(row=>{
+      let rowCabangId = cabangId;
+      if(needsBranchField){
+        const fileBranch = resolveBranchId(row.cabangRaw);
+        if(fileBranch) rowCabangId = fileBranch;
+      }
+      if(needsBranchField && !rowCabangId){ unresolvedBranch++; return; }
+      applySingleStockTx(storeScope, type, row.kode, row.nama, row.qty, row.harga, '', 'Import Excel — transaksi sparepart', rowCabangId);
+      processed++;
+    });
+    ui.modal = null;
+    saveState();
+    render();
+    alert(`Import selesai. ${processed} transaksi diproses.${unresolvedBranch?` ${unresolvedBranch} baris dilewati karena cabang tidak dikenali dan tidak ada cabang default dipilih.`:''}`);
+    return;
+  }
+
+  const kode = document.getElementById('txKode').value.trim();
+  const nama = document.getElementById('txNama').value.trim();
+  const qty = Number(document.getElementById('txQty').value||0);
+  const harga = Number(document.getElementById('txHarga').value||0);
+  const ticket = document.getElementById('txTicket').value.trim();
+  const note = document.getElementById('txNote').value.trim();
+  if(!nama || !qty){ alert('Nama sparepart dan jumlah wajib diisi.'); return; }
+
+  applySingleStockTx(storeScope, type, kode, nama, qty, harga, ticket, note, cabangId);
+
+  ui.modal = null;
+  saveState();
+  render();
+}
+
+function confirmOpname(scope, branchId){
+  const store = scope==='pusat' ? state.sparepartPusat : branchStockStore(branchId);
+  document.querySelectorAll('.opname-input').forEach(inp=>{
+    const idx = Number(inp.getAttribute('data-idx'));
+    const item = store.stock[idx];
+    const physical = Number(inp.value||0);
+    const diff = physical - item.qty;
+    if(diff!==0){
+      store.tx.push({ date:new Date().toISOString(), type:'opname', kode:item.kode, nama:item.nama, before:item.qty, qty:physical, diff, note:'Stok opname' });
+      item.qty = physical;
+    }
+  });
+  ui.modal = null;
+  saveState();
+  render();
+}
+
+function confirmUploadStock(scope, branchId){
+  const m = ui.modal;
+  if(!m || !m.rows || !m.rows.length) return;
+  const isPusat = scope==='pusat';
+  const store = isPusat ? state.sparepartPusat : branchStockStore(branchId);
+  const modeSel = document.getElementById('uploadStockMode');
+  const mode = modeSel ? modeSel.value : (m.mode||'set');
+  const incomingType = isPusat ? 'import_terima_gudang' : 'import_terima_pusat';
+
+  let added = 0, updated = 0;
+  m.rows.forEach(row=>{
+    let item = store.stock.find(s=>s.kode && row.kode && s.kode===row.kode);
+    if(!item) item = store.stock.find(s=>s.nama.toLowerCase()===row.nama.toLowerCase());
+    const isNew = !item;
+    if(!item){
+      item = { kode: row.kode, nama: row.nama, model: row.model, qty:0, harga: row.harga };
+      store.stock.push(item);
+    }
+    if(row.model) item.model = row.model;
+    if(row.harga) item.harga = row.harga;
+
+    if(mode==='add'){
+      const before = item.qty;
+      item.qty += row.qty;
+      store.tx.push({ date:new Date().toISOString(), type:incomingType, kode:item.kode, nama:item.nama, qty:row.qty, ticket:'', note:`Import Excel — ${before} -> ${item.qty}` });
+    } else {
+      const before = item.qty;
+      item.qty = row.qty;
+      store.tx.push({ date:new Date().toISOString(), type:'import_set', kode:item.kode, nama:item.nama, qty: item.qty - before, ticket:'', note:`Import Excel — set stok ${before} -> ${item.qty}` });
+    }
+    if(isNew) added++; else updated++;
+  });
+
+  ui.modal = null;
+  saveState();
+  render();
+  alert(`Import selesai. ${added} item baru ditambahkan, ${updated} item diperbarui.${m.skipped?` ${m.skipped} baris dilewati.`:''}`);
+}
+
+/* ---------------- Login gate ---------------- */
+function renderLogin(errorMsg){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="logo">OMRON<span>•</span>SERVICE</div>
+      <div class="sub">Healthcare Service Management — Online</div>
+      <div class="login-error ${errorMsg?'show':''}" id="loginError">${errorMsg?esc(errorMsg):''}</div>
+      <div class="field"><label>Email</label><input type="text" id="loginEmail" placeholder="nama@perusahaan.com"></div>
+      <div class="field"><label>Password</label><input type="text" id="loginPass" placeholder="Password" style="-webkit-text-security:disc;text-security:disc;"></div>
+      <button class="btn btn-primary" id="loginBtn">Masuk</button>
+      <div class="login-note">Akun dibuat oleh Admin melalui Firebase Console (Authentication → Users).<br>Hubungi Admin sistem jika belum punya akun.</div>
+    </div>
+  </div>`;
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  document.getElementById('loginPass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+}
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!email || !pass){ renderLogin('Email dan password wajib diisi.'); return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Memproses…';
+  auth.signInWithEmailAndPassword(email, pass).catch(err=>{
+    const map = {
+      'auth/invalid-email':'Format email tidak valid.',
+      'auth/user-not-found':'Akun tidak ditemukan.',
+      'auth/wrong-password':'Password salah.',
+      'auth/invalid-credential':'Email atau password salah.',
+      'auth/too-many-requests':'Terlalu banyak percobaan gagal. Coba lagi nanti.'
+    };
+    renderLogin(map[err.code] || ('Gagal login: ' + err.message));
+  });
+}
+function doLogout(){
+  if(!confirm('Keluar dari sistem?')) return;
+  auth.signOut();
+}
+
+/* ---------------- Init ---------------- */
+let appBooted = false;
+auth.onAuthStateChanged(user=>{
+  if(user){
+    if(!appBooted){ appBooted = true; loadState(); }
+    else { render(); }
+  } else {
+    appBooted = false;
+    state = null;
+    renderLogin();
+  }
+});
+</script>
+</body>
+</html>
