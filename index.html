@@ -347,8 +347,10 @@ let state = null; // loaded async
 let ui = {
   tab: "dashboard",
   subtab: null,
-  role: "pusat",          // pusat | cabang | pickup | resepsionis
+  role: "pusat",          // pusat | cabang | pickup | resepsionis (tampilan/tab yang aktif)
+  userRole: null,         // admin | teknisiPusat | teknisiCabang | pickup | resepsionis (hak akses asli user, dari state.users)
   roleRef: null,          // branch/pickup id when role is cabang/pickup
+  accessDenied: false,    // true kalau email login tidak terdaftar di Akses User
   modal: null,            // {type, ...} - used for small popups (branch, payment, stock tx, opname)
   page: null,             // {type:'customer-form', ...} - full in-page form (not a popup)
   search: "",
@@ -364,7 +366,13 @@ function defaultState(){
     sparepartCabang: {}, // { [branchId]: {stock:[], tx:[]} }
     payments: {}, // { [ticketNo]: {nominal, bank, vaCode, generatedAt, paid} }
     refData: buildDefaultRefData(), // editable master data (Setting tab): provinces, cities, categories, models, warrantyPeriod, asalProduk
+    users: [], // {id,email,role,branchId?,pickupId?,createdAt,createdBy} - hak akses per email (Setting > Akses User)
   };
+}
+
+// Guards against older saved states that predate the Akses User feature.
+function ensureUsersShape(){
+  if(!Array.isArray(state.users)) state.users = [];
 }
 
 // Guards against older saved states that predate the refData / Setting tab feature.
@@ -387,8 +395,10 @@ async function loadState(){
     state = defaultState();
   }
   ensureRefDataShape();
+  ensureUsersShape();
   migrateStockSync();
-  render();
+  resolveUserAccess();
+  renderApp();
   // Sinkron real-time: jika user lain menyimpan perubahan, tampilan ini ikut update otomatis.
   STATE_DOC.onSnapshot((snap)=>{
     if(!snap.exists || !snap.data() || !snap.data().json) return;
@@ -396,9 +406,74 @@ async function loadState(){
     try{
       state = JSON.parse(snap.data().json);
       ensureRefDataShape();
-      render();
+      ensureUsersShape();
+      resolveUserAccess(); // hak akses bisa berubah live kalau Admin mengubah/menghapus akses user ini
+      renderApp();
     }catch(e){ console.error('Gagal sinkronisasi data', e); }
   });
+}
+
+// Menentukan hak akses (role) pengguna yang sedang login berdasarkan emailnya,
+// dicocokkan dengan daftar di state.users (Setting > Akses User). Ini MENGGANTI
+// mekanisme lama yang membiarkan siapapun memilih sendiri role dari dropdown.
+//
+// CATATAN KEAMANAN: ini adalah pembatasan di level TAMPILAN (UI), bukan di level
+// database. Karena seluruh data tersimpan sebagai satu dokumen Firestore yang sama
+// untuk semua pengguna, siapapun yang sudah berhasil login (lolos Firebase Auth)
+// secara teknis masih bisa mengakses data mentahnya lewat console browser. Untuk
+// proteksi level database yang sesungguhnya, perlu ditambahkan Firestore Security
+// Rules + Custom Claims di sisi server (di luar cakupan file HTML ini).
+function resolveUserAccess(){
+  const email = ((auth.currentUser && auth.currentUser.email) || '').toLowerCase().trim();
+  ui.accessDenied = false;
+  if(!email) return;
+
+  if(!state.users.length){
+    // Sistem baru / belum ada satupun user terdaftar -> orang pertama yang login otomatis
+    // jadi Admin Pusat, supaya ada yang bisa mulai mendaftarkan user lain di Akses User.
+    ui.userRole = 'admin'; ui.role = 'pusat'; ui.roleRef = null;
+    return;
+  }
+
+  const rec = state.users.find(u => u.email.toLowerCase().trim() === email);
+  if(!rec){
+    ui.accessDenied = true;
+    ui.userRole = null;
+    return;
+  }
+
+  ui.userRole = rec.role;
+  if(rec.role==='admin' || rec.role==='teknisiPusat'){ ui.role='pusat'; ui.roleRef=null; }
+  else if(rec.role==='teknisiCabang'){ ui.role='cabang'; ui.roleRef=rec.branchId||null; }
+  else if(rec.role==='pickup'){ ui.role='pickup'; ui.roleRef=rec.pickupId||null; }
+  else if(rec.role==='resepsionis'){ ui.role='resepsionis'; ui.roleRef=null; }
+}
+
+function isAdmin(){ return ui.userRole==='admin'; }
+
+const USER_ROLE_LABELS = {
+  admin:'Admin Pusat', teknisiPusat:'Teknisi Pusat', teknisiCabang:'Teknisi Cabang',
+  pickup:'Team Pickup Center', resepsionis:'Resepsionis Pusat'
+};
+
+function renderApp(){
+  if(ui.accessDenied) return renderAccessDenied();
+  render();
+}
+
+function renderAccessDenied(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+  <div class="login-wrap">
+    <div class="login-box" style="max-width:400px">
+      <div class="logo">OMRON<span>•</span>SERVICE</div>
+      <div class="sub">Healthcare Service Management — Online</div>
+      <div class="login-error show">Akun <b>${esc((auth.currentUser&&auth.currentUser.email)||'')}</b> belum didaftarkan hak aksesnya di sistem ini.</div>
+      <div class="login-note">Hubungi Admin Pusat untuk didaftarkan lewat menu <b>Setting → Akses User</b>, menggunakan email yang sama persis dengan yang Anda pakai login.</div>
+      <button class="btn btn-outline" id="deniedLogoutBtn" style="margin-top:14px">Keluar</button>
+    </div>
+  </div>`;
+  document.getElementById('deniedLogoutBtn').addEventListener('click', doLogout);
 }
 let saveTimer=null;
 function saveState(){
@@ -909,7 +984,10 @@ function navAllowed(tab){
   if(ui.role==='cabang') return tab==='data-customer';
   if(ui.role==='pickup') return tab==='data-customer';
   if(ui.role==='resepsionis') return tab==='data-customer';
-  return true; // pusat/admin sees everything
+  // ui.role==='pusat' mencakup Admin Pusat dan Teknisi Pusat.
+  // Cabang/Pickup/Setting adalah menu konfigurasi sistem -> khusus Admin Pusat.
+  if(tab==='cabang' || tab==='pickup' || tab==='setting') return isAdmin();
+  return true; // sisanya (Dashboard, Data Customer, Status Pembayaran, Sparepart) terbuka untuk pusat/admin & teknisi pusat
 }
 
 const SETTING_SUBS = [
@@ -919,6 +997,7 @@ const SETTING_SUBS = [
   {id:'models', label:'Data Model Alat'},
   {id:'warrantyPeriod', label:'Data Warranty Period'},
   {id:'asalProduk', label:'Data Asal Produk'},
+  {id:'aksesUser', label:'Akses User'},
 ];
 
 function renderSidebar(){
@@ -970,31 +1049,15 @@ function renderTopbar(){
     'dashboard':'Dashboard', 'data-customer':'Data Customer', 'status-pembayaran':'Status Pembayaran',
     'cabang':'Cabang Service Center', 'pickup':'Pickup Center', 'sparepart':'Sparepart Stok', 'setting':'Setting'
   };
-  const roleLabel = {
-    pusat:'Admin Pusat', cabang:'Team Cabang', pickup:'Team Pickup Center', resepsionis:'Resepsionis Pusat'
-  };
-  let roleOptions = `
-    <option value="pusat" ${ui.role==='pusat'?'selected':''}>Admin Pusat (akses penuh)</option>
-    <option value="resepsionis" ${ui.role==='resepsionis'?'selected':''}>Resepsionis Pusat (input QR)</option>
-    <option value="cabang" ${ui.role==='cabang'?'selected':''}>Team Service Center Cabang</option>
-    <option value="pickup" ${ui.role==='pickup'?'selected':''}>Team Pickup Center</option>`;
-
-  let refSelector = '';
-  if(ui.role==='cabang'){
-    refSelector = `<select id="roleRefSel">` + state.branches.map(b=>`<option value="${b.id}" ${ui.roleRef===b.id?'selected':''}>${esc(b.nama)}</option>`).join('') + (state.branches.length?'':'<option value="">(belum ada cabang)</option>') + `</select>`;
-  } else if(ui.role==='pickup'){
-    refSelector = `<select id="roleRefSel">` + state.pickups.map(p=>`<option value="${p.id}" ${ui.roleRef===p.id?'selected':''}>${esc(p.nama)}</option>`).join('') + (state.pickups.length?'':'<option value="">(belum ada pickup center)</option>') + `</select>`;
-  }
+  const roleDisplay = USER_ROLE_LABELS[ui.userRole] || '-';
+  let refLabel = '';
+  if(ui.role==='cabang' && ui.roleRef) refLabel = ' · '+esc(branchName(ui.roleRef));
+  if(ui.role==='pickup' && ui.roleRef) refLabel = ' · '+esc(pickupName(ui.roleRef));
 
   return `<div class="topbar">
     <div>
       <h1>${titles[ui.tab]||''}</h1>
-      <div class="crumbs">Login sebagai: ${roleLabel[ui.role]}${ui.role==='cabang'&&ui.roleRef?' · '+esc(branchName(ui.roleRef)):''}${ui.role==='pickup'&&ui.roleRef?' · '+esc(pickupName(ui.roleRef)):''}</div>
-    </div>
-    <div class="role-box">
-      <span>👤</span>
-      <select id="roleSel">${roleOptions}</select>
-      ${refSelector}
+      <div class="crumbs">Login sebagai: ${esc(roleDisplay)}${refLabel}</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
       <span style="font-size:11.5px;color:var(--ink-soft);">${esc((auth.currentUser&&auth.currentUser.email)||'')}</span>
@@ -1025,7 +1088,7 @@ function renderDashboard(){
   return `
   <div class="toolbar">
     <div><h2 style="margin-bottom:2px">Ringkasan</h2><div class="desc">Statistik seluruh tiket service.</div></div>
-    ${ui.role==='pusat' ? `<button class="btn btn-outline" data-action="migrate-tickets">🔁 Migrasi Nomor Tiket ke Format Baru</button>` : ''}
+    ${isAdmin() ? `<button class="btn btn-outline" data-action="migrate-tickets">🔁 Migrasi Nomor Tiket ke Format Baru</button>` : ''}
   </div>
   <div class="kpi-grid">
     <div class="kpi"><div class="num">${total}</div><div class="lbl">Total Tiket Service</div></div>
@@ -1221,6 +1284,7 @@ function renderModal(){
   const m = ui.modal;
   if(m.type==='branch') return renderBranchModal(m);
   if(m.type==='branchUpload') return renderBranchUploadModal(m);
+  if(m.type==='userForm') return renderUserModal(m);
   if(m.type==='pickupCenter') return renderPickupModal(m);
   if(m.type==='payment') return renderPaymentModal(m);
   if(m.type==='stockTx') return renderStockTxModal(m);
@@ -1315,7 +1379,7 @@ function renderPaymentModal(m){
 
 /* ---------------- CABANG TAB ---------------- */
 function renderCabangTab(){
-  if(ui.role!=='pusat') return `<div class="banner">Tab ini hanya dapat dikelola oleh Admin Pusat.</div>`;
+  if(!isAdmin()) return `<div class="banner">Tab ini hanya dapat dikelola oleh Admin Pusat.</div>`;
   return `
   <div class="card">
     <div class="toolbar">
@@ -1444,7 +1508,7 @@ function confirmUploadBranch(){
 
 /* ---------------- PICKUP TAB ---------------- */
 function renderPickupTab(){
-  if(ui.role!=='pusat') return `<div class="banner">Tab ini hanya dapat dikelola oleh Admin Pusat.</div>`;
+  if(!isAdmin()) return `<div class="banner">Tab ini hanya dapat dikelola oleh Admin Pusat.</div>`;
   return `
   <div class="card">
     <div class="toolbar">
@@ -1578,8 +1642,9 @@ function txLabel(v){
 
 /* ---------------- SETTING TAB (editable master data) ---------------- */
 function renderSettingTab(){
-  if(ui.role!=='pusat') return `<div class="banner">Tab ini hanya dapat diakses oleh Admin Pusat.</div>`;
+  if(!isAdmin()) return `<div class="banner">Tab ini hanya dapat diakses oleh Admin Pusat.</div>`;
   if(!ui.subtab) ui.subtab = SETTING_SUBS[0].id;
+  if(ui.subtab==='aksesUser') return renderAksesUserPanel();
   return renderRefDataPanel(ui.subtab);
 }
 
@@ -1617,6 +1682,77 @@ function renderRefDataPanel(key){
       </tbody>
     </table></div>
     ${!data.length?'<div class="empty">Belum ada data. Tambahkan manual di atas atau upload lewat Excel.</div>':''}
+  </div>`;
+}
+
+/* ---------------- AKSES USER (Setting > Akses User) ---------------- */
+// Mendaftarkan HAK AKSES (role) per email. Ini TIDAK membuat akun login baru.
+// Akun login (email+password) tetap dibuat manual lewat Firebase Console
+// (Authentication > Users) - sama seperti sebelumnya. Setelah akun login dibuat
+// di Firebase Console, daftarkan emailnya DI SINI supaya sistem tahu role &
+// (kalau teknisi cabang) cabang mana yang jadi haknya.
+function renderAksesUserPanel(){
+  const users = state.users || [];
+  const myEmail = ((auth.currentUser && auth.currentUser.email)||'').toLowerCase().trim();
+  return `<div class="card">
+    <div class="toolbar">
+      <div><h2 style="margin-bottom:2px">Akses User</h2><div class="desc">${users.length} user terdaftar. Mengatur siapa yang boleh masuk sistem dan role/hak aksesnya.</div></div>
+      <button class="btn btn-primary" data-action="new-user">+ Tambah User</button>
+    </div>
+    <div class="banner blue" style="margin-bottom:16px">
+      Mendaftarkan email di sini <b>hanya mengatur hak akses (role)</b>, belum membuat akun login.
+      Akun login (email + password) tetap dibuat manual di <b>Firebase Console → Authentication → Users</b>,
+      lalu daftarkan email yang persis sama di sini agar sistem tahu role-nya.
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Email</th><th>Role</th><th>Cabang / Pickup</th><th>Ditambahkan</th><th>Aksi</th></tr></thead>
+      <tbody>
+      ${users.map(u=>{
+        const ref = u.role==='teknisiCabang' ? branchName(u.branchId) : (u.role==='pickup' ? pickupName(u.pickupId) : '-');
+        const isMe = u.email.toLowerCase().trim()===myEmail;
+        return `<tr>
+          <td><b>${esc(u.email)}</b>${isMe?' <span style="color:var(--ink-soft);font-size:11px">(Anda)</span>':''}</td>
+          <td>${esc(USER_ROLE_LABELS[u.role]||u.role)}</td>
+          <td>${esc(ref)}</td>
+          <td>${u.createdAt?new Date(u.createdAt).toLocaleDateString('id-ID'):'-'}</td>
+          <td><button class="btn btn-sm btn-danger" data-action="delete-user" data-id="${u.id}" ${isMe?'disabled title="Tidak bisa menghapus akses diri sendiri"':''}>Hapus</button></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>
+    ${!users.length?'<div class="empty">Belum ada user terdaftar. Orang pertama yang login otomatis menjadi Admin Pusat — segera daftarkan email Anda sendiri di sini juga (role Admin Pusat) supaya statusnya tercatat resmi.</div>':''}
+  </div>`;
+}
+
+function renderUserModal(m){
+  const role = m.role || 'teknisiPusat';
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Tambah User</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="field"><label>Email</label><input type="text" id="uEmail" placeholder="nama@perusahaan.com" value="${esc(m.email||'')}"></div>
+      <div class="field"><label>Role / Hak Akses</label>
+        <select id="uRole">
+          <option value="admin" ${role==='admin'?'selected':''}>Admin Pusat (akses penuh)</option>
+          <option value="teknisiPusat" ${role==='teknisiPusat'?'selected':''}>Teknisi Pusat (seperti Admin, tanpa akses Setting/Cabang/Pickup)</option>
+          <option value="teknisiCabang" ${role==='teknisiCabang'?'selected':''}>Teknisi Cabang (hanya cabang miliknya)</option>
+          <option value="pickup" ${role==='pickup'?'selected':''}>Team Pickup Center (hanya pickup center miliknya)</option>
+          <option value="resepsionis" ${role==='resepsionis'?'selected':''}>Resepsionis Pusat (input QR)</option>
+        </select>
+      </div>
+      ${role==='teknisiCabang' ? `
+        <div class="field"><label>Cabang</label>
+          <select id="uBranch">${state.branches.map(b=>`<option value="${b.id}" ${m.branchId===b.id?'selected':''}>${esc(b.nama)}</option>`).join('') || '<option value="">(belum ada cabang, tambahkan dulu di tab Cabang Service Center)</option>'}</select>
+        </div>` : ''}
+      ${role==='pickup' ? `
+        <div class="field"><label>Pickup Center</label>
+          <select id="uPickup">${state.pickups.map(p=>`<option value="${p.id}" ${m.pickupId===p.id?'selected':''}>${esc(p.nama)}</option>`).join('') || '<option value="">(belum ada pickup center, tambahkan dulu di tab Pickup Center)</option>'}</select>
+        </div>` : ''}
+      <div class="helper">Pastikan akun login (email+password) untuk email ini sudah dibuat di Firebase Console → Authentication → Users. Kalau belum, orang ini tidak akan bisa login meski sudah terdaftar di sini.</div>
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="save-user">Simpan</button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -2034,13 +2170,6 @@ function bindEvents(){
   const logoutBtn = document.getElementById('logoutBtn');
   if(logoutBtn) logoutBtn.addEventListener('click', doLogout);
 
-  const roleSel = document.getElementById('roleSel');
-  if(roleSel) roleSel.addEventListener('change', e=>{
-    ui.role = e.target.value; ui.roleRef=null; ui.tab = 'data-customer'; ui.subtab=null; render();
-  });
-  const roleRefSel = document.getElementById('roleRefSel');
-  if(roleRefSel) roleRefSel.addEventListener('change', e=>{ ui.roleRef = e.target.value; render(); });
-
   const branchFilter = document.getElementById('branchFilter');
   if(branchFilter) branchFilter.addEventListener('change', e=>{ ui.branchFilter = e.target.value; render(); });
   const pickupFilter = document.getElementById('pickupFilter');
@@ -2216,6 +2345,18 @@ function bindEvents(){
     const branchUploadMode = document.getElementById('branchUploadMode');
     if(branchUploadMode) branchUploadMode.addEventListener('change', e=>{ ui.modal.mode = e.target.value; render(); });
   }
+
+  // setting tab: form tambah user (Akses User)
+  if(ui.modal && ui.modal.type==='userForm'){
+    const uRoleSel = document.getElementById('uRole');
+    if(uRoleSel) uRoleSel.addEventListener('change', e=>{
+      // simpan dulu isian email yang sudah diketik supaya tidak hilang saat modal re-render
+      const emailField = document.getElementById('uEmail');
+      ui.modal.email = emailField ? emailField.value : ui.modal.email;
+      ui.modal.role = e.target.value;
+      render();
+    });
+  }
 }
 
 function bindDynamicFormFields(container, draft, isPublic){
@@ -2251,7 +2392,21 @@ function refreshFormSection(container, draft, isPublic){
 }
 
 /* ---------------- Action handler ---------------- */
+const ADMIN_ONLY_ACTIONS = new Set([
+  'new-branch','save-branch','delete-branch','open-upload-branch','confirm-upload-branch','dl-branch-template',
+  'new-pickup','save-pickup','delete-pickup',
+  'open-upload-ref','confirm-upload-ref','add-ref-item','delete-ref-item','dl-ref-template',
+  'migrate-tickets',
+  'new-user','save-user','delete-user'
+]);
+
 function handleAction(action, el){
+  // Pagar tambahan di level fungsi (selain disembunyikan di tampilan): action konfigurasi
+  // sistem tetap ditolak kalau entah bagaimana terpanggil oleh selain Admin Pusat.
+  if(ADMIN_ONLY_ACTIONS.has(action) && !isAdmin()){
+    alert('Aksi ini hanya dapat dilakukan oleh Admin Pusat.');
+    return;
+  }
   if(action==='close-modal'){ ui.modal=null; render(); return; }
   if(action==='close-form'){ ui.page=null; render(); return; }
   if(action==='migrate-tickets'){
@@ -2310,6 +2465,42 @@ function handleAction(action, el){
   if(action==='dl-branch-template'){
     const template = [{ "Nama Cabang":"OEC-Bandung", "Handle by":"Mitracare", "Kota":"Bandung", "Alamat":"Komplek Ruko Hyper Square No. A2, Jl. Pasir Kaliki, Kota Bandung, Jawa Barat 40172" }];
     exportExcel('Template-Cabang-Service-Center.xlsx', template, 'Cabang');
+    return;
+  }
+
+  if(action==='new-user'){ ui.modal={type:'userForm', role:'teknisiPusat'}; render(); return; }
+  if(action==='save-user'){
+    const email = document.getElementById('uEmail').value.trim().toLowerCase();
+    const role = document.getElementById('uRole').value;
+    const branchSel = document.getElementById('uBranch');
+    const pickupSel = document.getElementById('uPickup');
+    const branchId = branchSel ? branchSel.value : null;
+    const pickupId = pickupSel ? pickupSel.value : null;
+
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Masukkan email yang valid.'); return; }
+    if(state.users.some(u=>u.email.toLowerCase().trim()===email)){ alert('Email ini sudah terdaftar. Hapus dulu entri lama kalau ingin mengubah role-nya.'); return; }
+    if(role==='teknisiCabang' && !branchId){ alert('Pilih cabang untuk Teknisi Cabang ini. Kalau belum ada cabang, tambahkan dulu di tab "Cabang Service Center".'); return; }
+    if(role==='pickup' && !pickupId){ alert('Pilih pickup center untuk user ini. Kalau belum ada, tambahkan dulu di tab "Pickup Center".'); return; }
+
+    state.users.push({
+      id: uid('usr'), email, role,
+      branchId: role==='teknisiCabang' ? branchId : null,
+      pickupId: role==='pickup' ? pickupId : null,
+      createdAt: Date.now(),
+      createdBy: (auth.currentUser && auth.currentUser.email) || 'unknown'
+    });
+    ui.modal=null; saveState(); render();
+    return;
+  }
+  if(action==='delete-user'){
+    const id = el.getAttribute('data-id');
+    const target = state.users.find(u=>u.id===id);
+    const myEmail = ((auth.currentUser && auth.currentUser.email)||'').toLowerCase().trim();
+    if(target && target.email.toLowerCase().trim()===myEmail){ alert('Tidak bisa menghapus akses diri sendiri.'); return; }
+    if(confirm('Hapus akses user ini? Orang ini tidak akan bisa masuk sistem lagi sampai didaftarkan ulang. Akun login di Firebase Authentication tidak ikut terhapus (hapus manual di sana kalau perlu).')){
+      state.users = state.users.filter(u=>u.id!==id);
+      saveState(); render();
+    }
     return;
   }
 
@@ -2599,7 +2790,7 @@ let appBooted = false;
 auth.onAuthStateChanged(user=>{
   if(user){
     if(!appBooted){ appBooted = true; loadState(); }
-    else { render(); }
+    else { renderApp(); }
   } else {
     appBooted = false;
     state = null;
