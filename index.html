@@ -1220,6 +1220,7 @@ function defaultLokasiId(tipe){
 function renderModal(){
   const m = ui.modal;
   if(m.type==='branch') return renderBranchModal(m);
+  if(m.type==='branchUpload') return renderBranchUploadModal(m);
   if(m.type==='pickupCenter') return renderPickupModal(m);
   if(m.type==='payment') return renderPaymentModal(m);
   if(m.type==='stockTx') return renderStockTxModal(m);
@@ -1319,19 +1320,23 @@ function renderCabangTab(){
   <div class="card">
     <div class="toolbar">
       <div><h2 style="margin-bottom:2px">Cabang Service Center (OEC)</h2><div class="desc">${state.branches.length} cabang terdaftar.</div></div>
-      <button class="btn btn-primary" data-action="new-branch">+ Tambah Cabang</button>
+      <div class="row">
+        <button class="btn btn-outline" data-action="dl-branch-template">⬇ Template Excel</button>
+        <button class="btn btn-outline" data-action="open-upload-branch">⬆ Upload Excel</button>
+        <button class="btn btn-primary" data-action="new-branch">+ Tambah Cabang</button>
+      </div>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Nama OEC</th><th>Partner By</th><th>Kota</th><th>Jumlah Tiket</th><th>Aksi</th></tr></thead>
+      <thead><tr><th>Nama OEC</th><th>Partner By</th><th>Kota</th><th>Alamat</th><th>Jumlah Tiket</th><th>Aksi</th></tr></thead>
       <tbody>
       ${state.branches.map(b=>{
         const cnt = state.customers.filter(c=>c.lokasiTipe==='cabang'&&c.lokasiId===b.id).length;
-        return `<tr><td><b>${esc(b.nama)}</b></td><td>${esc(b.partner)}</td><td>${esc(b.kota)}</td><td>${cnt}</td>
+        return `<tr><td><b>${esc(b.nama)}</b></td><td>${esc(b.partner)}</td><td>${esc(b.kota)}</td><td>${esc(b.alamat||'-')}</td><td>${cnt}</td>
         <td><button class="btn btn-sm btn-danger" data-action="delete-branch" data-id="${b.id}">Hapus</button></td></tr>`;
       }).join('')}
       </tbody>
     </table></div>
-    ${!state.branches.length?'<div class="empty">Belum ada cabang. Klik "+ Tambah Cabang" untuk menambahkan.</div>':''}
+    ${!state.branches.length?'<div class="empty">Belum ada cabang. Klik "+ Tambah Cabang" untuk menambahkan manual, atau "⬆ Upload Excel" untuk menambahkan banyak cabang sekaligus.</div>':''}
   </div>`;
 }
 
@@ -1342,12 +1347,99 @@ function renderBranchModal(m){
       <div class="field"><label>Nama OEC</label><input type="text" id="bNama" placeholder="Contoh: OEC Bandung"></div>
       <div class="field"><label>Partner By</label><select id="bPartner"><option>Mitracare</option><option>Datascrip SC</option></select></div>
       <div class="field"><label>Kota OEC</label><input type="text" id="bKota" placeholder="Contoh: Bandung"></div>
+      <div class="field"><label>Alamat (opsional)</label><textarea id="bAlamat" rows="2" placeholder="Alamat lengkap cabang"></textarea></div>
       <div class="footer-actions">
         <button class="btn btn-outline" data-action="close-modal">Batal</button>
         <button class="btn btn-primary" data-action="save-branch">Simpan</button>
       </div>
     </div>
   </div>`;
+}
+
+// Kolom Excel yang dikenali (nama kolom cukup mirip, tidak harus persis sama):
+//   Nama Cabang -> nama · Handle by -> partner · Kota -> kota · Alamat -> alamat
+function parseBranchWorkbook(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(sheet, {defval:''});
+  const rows = [];
+  let skipped = 0;
+  const aliasNama = ['namacabang','nama','cabang','namaoec','oec','name','namaservicecenter'];
+  const aliasPartner = ['handleby','partner','partnerby','handlerby','pic'];
+  const aliasKota = ['kota','city','kabupaten'];
+  const aliasAlamat = ['alamat','address','alamatlengkap'];
+  raw.forEach(r=>{
+    let nama=null, partner=null, kota=null, alamat=null;
+    Object.keys(r).forEach(h=>{
+      const n = normHeader(h);
+      if(nama==null && aliasNama.includes(n)) nama = r[h];
+      if(partner==null && aliasPartner.includes(n)) partner = r[h];
+      if(kota==null && aliasKota.includes(n)) kota = r[h];
+      if(alamat==null && aliasAlamat.includes(n)) alamat = r[h];
+    });
+    const namaS = String(nama==null?'':nama).trim();
+    const kotaS = String(kota==null?'':kota).trim();
+    if(!namaS || !kotaS){ skipped++; return; }
+    rows.push({
+      nama: namaS,
+      partner: String(partner==null?'':partner).trim(),
+      kota: kotaS,
+      alamat: String(alamat==null?'':alamat).trim()
+    });
+  });
+  return { rows, skipped };
+}
+
+function renderBranchUploadModal(m){
+  const rows = m.rows;
+  return `<div class="modal-overlay" data-close="overlay">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>Upload Cabang Service Center (Excel)</h2><button class="close-x" data-action="close-modal">✕</button></div>
+      <div class="desc">Format kolom: <b>Nama Cabang</b>, <b>Handle by</b>, <b>Kota</b>, <b>Alamat</b>. Nama kolom cukup mirip, tidak harus persis sama. Gunakan ini saat ada penambahan cabang service center baru.</div>
+      <div class="row" style="margin-bottom:10px"><button class="btn btn-outline btn-sm" data-action="dl-branch-template">⬇ Template Excel</button></div>
+      <div class="field"><label>Pilih File Excel (.xlsx / .xls)</label><input type="file" id="branchUploadFile" accept=".xlsx,.xls"></div>
+      <div class="field"><label>Mode Import</label>
+        <select id="branchUploadMode">
+          <option value="add" ${m.mode!=='replace'?'selected':''}>Tambahkan ke daftar yang ada (lewati nama cabang duplikat)</option>
+          <option value="replace" ${m.mode==='replace'?'selected':''}>Ganti seluruh daftar cabang dengan isi file ini</option>
+        </select>
+        ${m.mode==='replace'?'<div class="helper">⚠️ Cabang lama akan dihapus dari daftar. Tiket yang sudah tercatat di cabang lama tidak ikut terhapus, tapi referensinya akan menampilkan "-".</div>':''}
+      </div>
+      ${rows ? `
+        <div class="banner blue">${rows.length} baris valid siap diproses.${m.skipped?` ${m.skipped} baris dilewati karena Nama Cabang/Kota kosong.`:''}</div>
+        <div class="table-wrap" style="max-height:240px;overflow-y:auto"><table>
+          <thead><tr><th>Nama Cabang</th><th>Handle by</th><th>Kota</th><th>Alamat</th></tr></thead>
+          <tbody>${rows.slice(0,50).map(r=>`<tr><td>${esc(r.nama)}</td><td>${esc(r.partner||'-')}</td><td>${esc(r.kota)}</td><td>${esc(r.alamat||'-')}</td></tr>`).join('')}</tbody>
+        </table></div>
+        ${rows.length>50?`<div class="helper">Menampilkan 50 dari ${rows.length} baris.</div>`:''}
+      ` : `<div class="empty">Pilih file untuk melihat pratinjau.</div>`}
+      <div class="footer-actions">
+        <button class="btn btn-outline" data-action="close-modal">Batal</button>
+        <button class="btn btn-primary" data-action="confirm-upload-branch" ${!rows||!rows.length?'disabled':''}>Import ${rows?rows.length:0} Cabang</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function confirmUploadBranch(){
+  const m = ui.modal;
+  if(!m || !m.rows || !m.rows.length) return;
+  const modeSel = document.getElementById('branchUploadMode');
+  const mode = modeSel ? modeSel.value : (m.mode||'add');
+  if(mode==='replace') state.branches = [];
+
+  let added=0, skippedDup=0;
+  m.rows.forEach(r=>{
+    const exists = state.branches.some(b=>b.nama.toLowerCase()===r.nama.toLowerCase());
+    if(exists){ skippedDup++; return; }
+    state.branches.push({ id:uid('brc'), nama:r.nama, partner:r.partner, kota:r.kota, alamat:r.alamat, createdAt:Date.now() });
+    added++;
+  });
+
+  ui.modal = null;
+  saveState();
+  render();
+  alert(`Import selesai. ${added} cabang ditambahkan.${skippedDup?` ${skippedDup} baris dilewati karena nama cabang sudah ada.`:''}`);
 }
 
 /* ---------------- PICKUP TAB ---------------- */
@@ -2096,6 +2188,34 @@ function bindEvents(){
     const refUploadMode = document.getElementById('refUploadMode');
     if(refUploadMode) refUploadMode.addEventListener('change', e=>{ ui.modal.mode = e.target.value; });
   }
+
+  // cabang tab: branch upload modal
+  if(ui.modal && ui.modal.type==='branchUpload'){
+    const branchUploadFile = document.getElementById('branchUploadFile');
+    if(branchUploadFile){
+      branchUploadFile.addEventListener('change', (e)=>{
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev)=>{
+          try{
+            const data = new Uint8Array(ev.target.result);
+            const { rows, skipped } = parseBranchWorkbook(data);
+            if(!rows.length){ alert('Tidak ditemukan data valid pada file ini. Periksa kembali nama kolom "Nama Cabang" dan "Kota".'); }
+            ui.modal.rows = rows;
+            ui.modal.skipped = skipped;
+            render();
+          }catch(err){
+            console.error(err);
+            alert('Gagal membaca file Excel. Pastikan format file .xlsx / .xls valid.');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    const branchUploadMode = document.getElementById('branchUploadMode');
+    if(branchUploadMode) branchUploadMode.addEventListener('change', e=>{ ui.modal.mode = e.target.value; render(); });
+  }
 }
 
 function bindDynamicFormFields(container, draft, isPublic){
@@ -2173,8 +2293,9 @@ function handleAction(action, el){
     const nama = document.getElementById('bNama').value.trim();
     const partner = document.getElementById('bPartner').value;
     const kota = document.getElementById('bKota').value.trim();
+    const alamat = document.getElementById('bAlamat').value.trim();
     if(!nama){ alert('Nama OEC wajib diisi'); return; }
-    state.branches.push({id:uid('brc'), nama, partner, kota, createdAt:Date.now()});
+    state.branches.push({id:uid('brc'), nama, partner, kota, alamat, createdAt:Date.now()});
     ui.modal=null; saveState(); render(); return;
   }
   if(action==='delete-branch'){
@@ -2182,6 +2303,13 @@ function handleAction(action, el){
       state.branches = state.branches.filter(b=>b.id!==el.getAttribute('data-id'));
       saveState(); render();
     }
+    return;
+  }
+  if(action==='open-upload-branch'){ ui.modal={type:'branchUpload', mode:'add', rows:null, skipped:0}; render(); return; }
+  if(action==='confirm-upload-branch'){ confirmUploadBranch(); return; }
+  if(action==='dl-branch-template'){
+    const template = [{ "Nama Cabang":"OEC-Bandung", "Handle by":"Mitracare", "Kota":"Bandung", "Alamat":"Komplek Ruko Hyper Square No. A2, Jl. Pasir Kaliki, Kota Bandung, Jawa Barat 40172" }];
+    exportExcel('Template-Cabang-Service-Center.xlsx', template, 'Cabang');
     return;
   }
 
